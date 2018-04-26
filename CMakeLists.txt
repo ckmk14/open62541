@@ -59,15 +59,22 @@ option(UA_ENABLE_DISCOVERY "Enable Discovery Service (LDS)" ON)
 option(UA_ENABLE_DISCOVERY_MULTICAST "Enable Discovery Service with multicast support (LDS-ME)" OFF)
 option(UA_ENABLE_AMALGAMATION "Concatenate the library to a single file open62541.h/.c" OFF)
 option(UA_ENABLE_COVERAGE "Enable gcov coverage" OFF)
+option(UA_ENABLE_ENCRYPTION "Enable encryption support (uses mbedTLS)" OFF)
 option(BUILD_SHARED_LIBS "Enable building of shared libraries (dll/so)" OFF)
 
-# It should not be possible to enable events without enabling subscriptions and full ns0
-if ((UA_ENABLE_SUBSCRIPTIONS_EVENTS) AND (NOT (UA_ENABLE_SUBSCRIPTIONS AND UA_ENABLE_FULL_NS0)))
-    message(FATAL_ERROR "Unable to enable events without UA_ENABLE_SUBSCRIPTIONS and UA_ENABLE_FULL_NS0")
+# Namespace Zero
+set(UA_NAMESPACE_ZERO "MINIMAL" CACHE STRING "Completeness of the generated namespace zero (bootstrap/minimal/full)")
+SET_PROPERTY(CACHE UA_NAMESPACE_ZERO PROPERTY STRINGS "BOOSTRAP" "MINIMAL" "FULL")
+if(MSVC AND UA_NAMESPACE_ZERO EQUAL "FULL")
+    # For the full NS0 we need a stack size of 8MB (as it is default on linux)
+    # See https://github.com/open62541/open62541/issues/1326
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:8000000")
 endif()
 
-# Encryption Options
-option(UA_ENABLE_ENCRYPTION "Enable encryption support (uses mbedTLS)" OFF)
+# It should not be possible to enable events without enabling subscriptions and full ns0
+if((UA_ENABLE_SUBSCRIPTIONS_EVENTS) AND (NOT (UA_ENABLE_SUBSCRIPTIONS AND UA_NAMESPACE_ZERO EQUAL "FULL")))
+    message(FATAL_ERROR "Unable to enable events without UA_ENABLE_SUBSCRIPTIONS and UA_ENABLE_FULL_NS0")
+endif()
 
 if(UA_ENABLE_COVERAGE)
   set(CMAKE_BUILD_TYPE DEBUG)
@@ -125,14 +132,7 @@ mark_as_advanced(UA_ENABLE_VALGRIND_INTERACTIVE)
 option(UA_MSVC_FORCE_STATIC_CRT "Force linking with the static C-runtime library when compiling to static library with MSVC" ON)
 mark_as_advanced(UA_MSVC_FORCE_STATIC_CRT)
 
-option(UA_ENABLE_FULL_NS0 "Use the full NS0 instead of a minimal Namespace 0 nodeset" OFF)
-if (MSVC AND UA_ENABLE_FULL_NS0)
-    # For the full NS0 we need a stack size of 8MB (as it is default on linux)
-    # See https://github.com/open62541/open62541/issues/1326
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:8000000")
-endif()
-
-option(UA_FILE_NS0 "Custom NodeSet file containing NS0")
+option(UA_FILE_NS0 "Override the NodeSet xml file used to generate namespace zero")
 mark_as_advanced(UA_FILE_NS0)
 
 # Semaphores/file system may not be available on embedded devices. It can be
@@ -526,7 +526,7 @@ endif()
 # Generate source files #
 #########################
 
-if (UA_ENABLE_FULL_NS0)
+if(UA_NAMESPACE_ZERO EQUAL "FULL")
     if(NOT UA_FILE_NS0)
         set(UA_FILE_NS0 ${PROJECT_SOURCE_DIR}/deps/ua-nodeset/Schema/Opc.Ua.NodeSet2.xml)
     endif()

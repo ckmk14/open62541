@@ -132,12 +132,12 @@ Most options can be changed manually in :file:`ua_config.h` (:file:`open62541.h`
 for the single-file release) after the code generation. But usually there is no
 need to adjust them.
 
-Build Type and Logging
-^^^^^^^^^^^^^^^^^^^^^^
+Main Build Options
+^^^^^^^^^^^^^^^^^^
 
 **CMAKE_BUILD_TYPE**
-  - ``RelWithDebInfo`` -O2 optimization with debug symbols
   - ``Release`` -O2 optimization without debug symbols
+  - ``RelWithDebInfo`` -O2 optimization with debug symbols
   - ``Debug`` -O0 optimization with debug symbols
   - ``MinSizeRel`` -Os optimization without debug symbols
 
@@ -152,62 +152,81 @@ Build Type and Logging
      - 200: Debug
      - 100: Trace
 
-UA_BUILD_* group
-^^^^^^^^^^^^^^^^
+Select build artefacts
+^^^^^^^^^^^^^^^^^^^^^^
 
-By default only the shared object libopen62541.so or the library open62541.dll
-and open62541.dll.a resp. open62541.lib are build. Additional artifacts can be
-specified by the following options:
+By default only the main library shared object libopen62541.so (open62541.dll)
+or static linking archive open62541.a (open62541.lib) is built. Additional
+artifacts can be specified by the following options:
 
 **UA_BUILD_EXAMPLES**
-   Compile example servers and clients from :file:`examples/{xyz}.c`. A static and a dynamic binary is linked, respectively.
+   Compile example servers and clients from :file:`examples/*.c`.
 
 **UA_BUILD_UNIT_TESTS**
-   Compile unit tests with Check framework. The tests can be executed with ``make test``
-
-**UA_BUILD_EXAMPLES_NODESET_COMPILER**
-   Generate an OPC UA information model from a nodeset XML (experimental)
+   Compile unit tests. The tests can be executed with ``make test``
 
 **UA_BUILD_SELFSIGNED_CERTIFICATE**
    Generate a self-signed certificate for the server (openSSL required)
 
-UA_ENABLE_* group
-^^^^^^^^^^^^^^^^^
-
-This group contains build options related to the supported OPC UA features.
+Detailed SDK Features
+^^^^^^^^^^^^^^^^^^^^^
 
 **UA_ENABLE_SUBSCRIPTIONS**
    Enable subscriptions
+
 **UA_ENABLE_SUBSCRIPTIONS_EVENTS**
     Enable the use of events for subscriptions
+
 **UA_ENABLE_METHODCALLS**
    Enable the Method service set
+
 **UA_ENABLE_NODEMANAGEMENT**
    Enable dynamic addition and removal of nodes at runtime
+
 **UA_ENABLE_AMALGAMATION**
    Compile a single-file release into the files :file:`open62541.c` and :file:`open62541.h`
+
 **UA_ENABLE_MULTITHREADING**
    Enable multi-threading support
+
 **UA_ENABLE_IMMUTABLE_NODES**
-   Nodes in the information model are not edited but copied and replaced. The replacement is done with atomic operations so that the information model is always consistent and can be accessed from an interrupt or parallel thread (depends on the node storage plugin implementation). This feature is a prerequisite for ``UA_ENABLE_MULTITHREADING``.
+   Nodes in the information model are not edited but copied and replaced. The
+   replacement is done with atomic operations so that the information model is
+   always consistent and can be accessed from an interrupt or parallel thread
+   (depends on the node storage plugin implementation). This feature is a
+   prerequisite for ``UA_ENABLE_MULTITHREADING``.
+
 **UA_ENABLE_COVERAGE**
    Measure the coverage of unit tests
+
+**UA_NAMESPACE_ZERO**
+
+   Namespace zero contains the standard-defined nodes. The full namespace zero
+   may not be required for all applications. The selectable options are as follows:
+
+   - ``BOOTSTRAP``: A barebones namespace zero that is compatible with most
+     clients. But this namespace 0 is so small that it does not pass the CTT
+     (Conformance Testing Tools of the OPC Foundation).
+   - ``MINIMAL``: Small namespace zero that passes the CTT
+   - ``FULL``: Full namespace zero generated from the official XML definitions
+
+   The advanced build option ``UA_FILE_NS0`` can be used to override the XML
+   file used for namespace zero generation.
 
 Some options are marked as advanced. The advanced options need to be toggled to
 be visible in the cmake GUIs.
 
 **UA_ENABLE_TYPENAMES**
    Add the type and member names to the UA_DataType structure. Enabled by default.
+
 **UA_ENABLE_STATUSCODE_DESCRIPTIONS**
    Compile the human-readable name of the StatusCodes into the binary. Enabled by default.
-**UA_ENABLE_GENERATE_NAMESPACE0**
-   Generate and load UA XML Namespace 0 definition
-   ``UA_GENERATE_NAMESPACE0_FILE`` is used to specify the file for NS0 generation from namespace0 folder. Default value is ``Opc.Ua.NodeSet2.xml``
+
 **UA_ENABLE_NONSTANDARD_UDP**
    Enable udp extension
 
-UA_DEBUG_* group
-^^^^^^^^^^^^^^^^
+Debug Build Options
+^^^^^^^^^^^^^^^^^^^
 
 This group contains build options mainly useful for development of the library itself.
 
