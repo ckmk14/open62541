@@ -1,0 +1,15 @@
+KeyValuePair
+DataSetMetaDataType
+ConfigurationVersionDataType
+UadpDataSetWriterMessageDataType
+UadpWriterGroupMessageDataType
+UadpDataSetMessageContentMask
+UadpNetworkMessageContentMask
+PublishedVariableDataType
+DataSetOrderingType
+DataSetFieldContentMask
+EnumDefinition
+EnumDescription
+SimpleTypeDescription
+DataSetFieldFlags
+FieldMetaData
