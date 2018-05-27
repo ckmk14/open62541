@@ -1,3 +1,4 @@
+SubscriptionAcknowledgement
 FilterOperator
 ContentFilterElement
 ContentFilter
