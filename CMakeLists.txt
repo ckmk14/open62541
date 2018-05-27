@@ -64,8 +64,14 @@ option(UA_ENABLE_ENCRYPTION "Enable encryption support (uses mbedTLS)" OFF)
 option(BUILD_SHARED_LIBS "Enable building of shared libraries (dll/so)" OFF)
 
 # Namespace Zero
-set(UA_NAMESPACE_ZERO "MINIMAL" CACHE STRING "Completeness of the generated namespace zero (bootstrap/minimal/full)")
-SET_PROPERTY(CACHE UA_NAMESPACE_ZERO PROPERTY STRINGS "BOOSTRAP" "MINIMAL" "FULL")
+set(UA_NAMESPACE_ZERO "REDUCED" CACHE STRING "Completeness of the generated namespace zero (minimal/reduced/full)")
+SET_PROPERTY(CACHE UA_NAMESPACE_ZERO PROPERTY STRINGS "MINIMAL" "REDUCED" "FULL")
+if(UA_NAMESPACE_ZERO STREQUAL "MINIMAL")
+    set(UA_GENERATED_NAMESPACE_ZERO OFF)
+else()
+    set(UA_GENERATED_NAMESPACE_ZERO ON)
+endif()
+
 if(MSVC AND UA_NAMESPACE_ZERO EQUAL "FULL")
     # For the full NS0 we need a stack size of 8MB (as it is default on linux)
     # See https://github.com/open62541/open62541/issues/1326
@@ -74,7 +80,7 @@ endif()
 
 # It should not be possible to enable events without enabling subscriptions and full ns0
 if((UA_ENABLE_SUBSCRIPTIONS_EVENTS) AND (NOT (UA_ENABLE_SUBSCRIPTIONS AND UA_NAMESPACE_ZERO EQUAL "FULL")))
-    message(FATAL_ERROR "Unable to enable events without UA_ENABLE_SUBSCRIPTIONS and UA_ENABLE_FULL_NS0")
+    message(FATAL_ERROR "Unable to enable events without UA_ENABLE_SUBSCRIPTIONS and full namespace 0")
 endif()
 
 if(UA_ENABLE_COVERAGE)
