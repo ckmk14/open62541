@@ -70,6 +70,9 @@ endif()
 # Encryption Options
 option(UA_ENABLE_ENCRYPTION "Enable encryption support (uses mbedTLS)" OFF)
 
+option(UA_ENABLE_CA "Enable CA interface (uses mbedTLS)" OFF)
+mark_as_advanced(UA_ENABLE_CA)
+
 if(UA_ENABLE_COVERAGE)
   set(CMAKE_BUILD_TYPE DEBUG)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
@@ -218,7 +221,7 @@ if (UA_COMPILE_AS_CXX)
     add_definitions(-D__STDC_CONSTANT_MACROS)
 endif()
 
-if(UA_ENABLE_ENCRYPTION)
+if(UA_ENABLE_ENCRYPTION OR UA_ENABLE_CA)
     # The recommended way is to install mbedtls via the OS package manager. If
     # that is not possible, manually compile mbedTLS and set the cmake variables
     # defined in /tools/cmake/FindMbedTLS.cmake.
@@ -378,6 +381,7 @@ set(exported_headers ${PROJECT_BINARY_DIR}/src_generated/ua_config.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_network.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_access_control.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_pki.h
+                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_ca.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_securitypolicy.h
                      ${PROJECT_SOURCE_DIR}/include/ua_server_pubsub.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_pubsub.h
@@ -491,6 +495,12 @@ if(UA_ENABLE_ENCRYPTION)
     list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic128rsa15.c
                                        ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic256sha256.c)
 endif()
+
+if(UA_ENABLE_CA)
+    list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/plugins/ua_mbedtls_ca.h)
+    list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_mbedtls_ca.c)
+endif()
+
 
 if(UA_ENABLE_PUBSUB)
     list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/plugins/ua_network_pubsub_udp.h)
@@ -920,3 +930,6 @@ set_target_properties(open62541-generator-namespace PROPERTIES FOLDER "open62541
 set_target_properties(open62541-generator-statuscode PROPERTIES FOLDER "open62541/generators")
 set_target_properties(open62541-generator-transport PROPERTIES FOLDER "open62541/generators")
 set_target_properties(open62541-generator-types PROPERTIES FOLDER "open62541/generators")
+
+add_definitions("-Wno-unused-function")
+add_definitions("-Wno-unused-variable")

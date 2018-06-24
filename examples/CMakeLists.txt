@@ -145,3 +145,7 @@ if(UA_ENABLE_PUBSUB)
         add_example(tutorial_pubsub_subscribe pubsub/tutorial_pubsub_subscribe.c)
     endif()
 endif()
+
+if(UA_ENABLE_CA)
+    add_example(tutorial_ca gds/server_ca.c)
+endif()
