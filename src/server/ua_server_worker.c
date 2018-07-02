@@ -353,6 +353,7 @@ UA_UInt16
 UA_Server_run_iterate(UA_Server *server, UA_Boolean waitInternal) {
     /* Process repeated work */
     UA_DateTime now = UA_DateTime_nowMonotonic();
+
     UA_DateTime nextRepeated =
         UA_Timer_process(&server->timer, now,
                          (UA_TimerDispatchCallback)UA_Server_workerCallback,

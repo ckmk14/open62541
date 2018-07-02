@@ -356,8 +356,9 @@ struct UA_SecurityPolicy {
 
     /*Updates the ApplicationInstaceCertificate and the private key during an open SecureChannel*/
     UA_StatusCode (*updateCertificateAndPrivateKey)(UA_SecurityPolicy *policy,
-                                                    const UA_ByteString localCertificate,
-                                                    UA_ByteString localPrivateKey);
+                                           const UA_ByteString newCertificate,
+                                           const UA_ByteString newPrivateKey);
+
     /* Deletes the dynamic content of the policy */
     void (*deleteMembers)(UA_SecurityPolicy *policy);
 };

@@ -1252,6 +1252,11 @@ UA_StatusCode UA_EXPORT
 UA_Server_getNamespaceByName(UA_Server *server, const UA_String namespaceUri,
                              size_t* foundIndex);
 
+void UA_EXPORT
+UA_Server_doMagic(UA_Server *server,
+                  const UA_ByteString *certificate,
+                  const UA_ByteString  *privateKey);
+
 #ifdef __cplusplus
 }
 #endif

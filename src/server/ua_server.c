@@ -342,3 +342,15 @@ UA_StatusCode
 UA_Server_removeRepeatedCallback(UA_Server *server, UA_UInt64 callbackId) {
     return UA_Timer_removeRepeatedCallback(&server->timer, callbackId);
 }
+
+/////////////////////////////////////
+#include <stdio.h>
+void
+UA_Server_doMagic(UA_Server *server,
+                  const UA_ByteString *certificate,
+                  const UA_ByteString *privateKey) {
+    printf("\nBegin\n");
+    UA_SecurityPolicy *policy = &server->config.endpoints[1].securityPolicy;
+    policy->updateCertificateAndPrivateKey(policy, *certificate, *privateKey);
+    printf("\nEnd\n");
+}

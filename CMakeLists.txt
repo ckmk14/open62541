@@ -84,8 +84,6 @@ if((UA_ENABLE_SUBSCRIPTIONS_EVENTS) AND (NOT (UA_ENABLE_SUBSCRIPTIONS AND UA_NAM
     message(FATAL_ERROR "Unable to enable events without UA_ENABLE_SUBSCRIPTIONS and full namespace 0")
 endif()
 
-option(UA_ENABLE_CA "Enable CA interface (uses mbedTLS)" OFF)
-mark_as_advanced(UA_ENABLE_CA)
 
 if(UA_ENABLE_COVERAGE)
   set(CMAKE_BUILD_TYPE DEBUG)
@@ -504,8 +502,8 @@ if(UA_ENABLE_ENCRYPTION)
 endif()
 
 if(UA_ENABLE_CA)
-    list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/plugins/ua_mbedtls_ca.h)
-    list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_mbedtls_ca.c)
+    list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/plugins/ua_opensslCA_ca.h)
+    list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_opensslCA_ca.c)
 endif()
 
 
@@ -951,3 +949,4 @@ set_target_properties(open62541-generator-types PROPERTIES FOLDER "open62541/gen
 
 add_definitions("-Wno-unused-function")
 add_definitions("-Wno-unused-variable")
+add_definitions("-Wno-unused-but-set-variable")

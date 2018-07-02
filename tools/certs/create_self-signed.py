@@ -42,4 +42,20 @@ os.system("openssl rsa -inform PEM -in localhost.key -outform DER -out server_ke
 os.remove("localhost.key")
 os.remove("localhost.crt")
 
+os.system("""openssl req \
+     -config {} \
+     -new \
+     -nodes \
+     -x509 -sha256  \
+     -newkey rsa:{} \
+     -keyout localhost.key -days 365 \
+     -subj "/C=DE/O=Newopen62541/CN=NEWopen62541Server@localhost"\
+     -out localhost.crt""".format(openssl_conf, keysize))
+
+os.system("openssl x509 -in localhost.crt -outform der -out server_cert2.der")
+os.system("openssl rsa -inform PEM -in localhost.key -outform DER -out server_key2.der")
+
+os.remove("localhost.key")
+os.remove("localhost.crt")
+
 print("Certificates generated in " + sys.argv[1])
