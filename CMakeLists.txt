@@ -126,6 +126,9 @@ if(UA_ENABLE_PUBSUB_INFORMATIONMODEL)
     endif()
 endif()
 
+option(UA_ENABLE_GDS "GDS Features" OFF)
+mark_as_advanced(UA_ENABLE_GDS)
+
 option(UA_ENABLE_STATUSCODE_DESCRIPTIONS "Enable conversion of StatusCode to human-readable error message" ON)
 mark_as_advanced(UA_ENABLE_STATUSCODE_DESCRIPTIONS)
 
@@ -226,12 +229,18 @@ if (UA_COMPILE_AS_CXX)
     add_definitions(-D__STDC_CONSTANT_MACROS)
 endif()
 
-if(UA_ENABLE_ENCRYPTION OR UA_ENABLE_CA)
+if(UA_ENABLE_ENCRYPTION)
     # The recommended way is to install mbedtls via the OS package manager. If
     # that is not possible, manually compile mbedTLS and set the cmake variables
     # defined in /tools/cmake/FindMbedTLS.cmake.
     find_package(MbedTLS REQUIRED)
     list(APPEND open62541_LIBRARIES ${MBEDTLS_LIBRARIES})
+endif()
+
+
+if(UA_ENABLE_ENCRYPTION AND UA_ENABLE_GDS)
+    find_package(OpenSSL REQUIRED)
+    list(APPEND open62541_LIBRARIES ${OPENSSL_LIBRARIES})
 endif()
 
 if(NOT WIN32)
@@ -386,8 +395,8 @@ set(exported_headers ${PROJECT_BINARY_DIR}/src_generated/ua_config.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_network.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_access_control.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_pki.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_ca.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_securitypolicy.h
+                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_ca.h
                      ${PROJECT_SOURCE_DIR}/include/ua_server_pubsub.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_pubsub.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_nodestore.h
@@ -501,8 +510,8 @@ if(UA_ENABLE_ENCRYPTION)
                                        ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic256sha256.c)
 endif()
 
-if(UA_ENABLE_CA)
-    list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/plugins/ua_opensslCA_ca.h)
+if(UA_ENABLE_GDS)
+    list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/plugins/ua_opensslCA_ca.h )
     list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_opensslCA_ca.c)
 endif()
 

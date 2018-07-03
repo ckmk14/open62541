@@ -4,10 +4,13 @@
 
 #include "ua_opensslCA_ca.h"
 #include <stdio.h>
-#include <openssl/bio.h>
+
+#include <openssl/evp.h>
+#include <openssl/rsa.h>
+#include <openssl/x509v3.h>
 #include <openssl/err.h>
 #include <openssl/pem.h>
-#include <openssl/x509v3.h>
+#include <openssl/conf.h>
 
 #define  CA_KEY_USAGE "critical,digitalSignature,keyCertSign,cRLSign"
 #define  CA_BASIC_CONSTRAINTS "critical,CA:TRUE"
@@ -175,7 +178,7 @@ static UA_StatusCode Create_CAContext(UA_GDSCertificateGroup *scg,
     X509_sign(cac->caCert, cac->caKey, EVP_sha256());
 
     FILE * f;
-    f = fopen("cert.pem", "wb");
+    f = fopen("/home/kocybi/open62541/cmake-build-debug/examples/cacert.pem", "wb");
     PEM_write_X509(f, cac->caCert);
     fclose(f);
 
@@ -289,10 +292,13 @@ UA_CreateGDSCertificateGroup(UA_GDSCertificateGroup *scg, int privateKeySizeCA,
                              size_t privateKeyExponent, UA_Logger logger) {
 
     scg->logger = logger;
-    scg->certificateSigningRequest = certificateSigningRequest;
-    scg->deleteMembers = deleteMembers_GDSCertificateGroup;
+   // scg->certificateSigningRequest = certificateSigningRequest;
+   // scg->deleteMembers = deleteMembers_GDSCertificateGroup;
 
+
+    BN_new();
     printf("Hallo");
+
 
     return Create_CAContext(scg, privateKeySizeCA, privateKeyExponent, "DEDE", "DE", "DE", 365);
 }

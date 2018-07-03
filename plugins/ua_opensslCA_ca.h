@@ -2,16 +2,16 @@
 // Created by markus on 23.06.18.
 //
 
-#ifndef OPEN62541_UA_MBEDTLS_CA_H
-#define OPEN62541_UA_MBEDTLS_CA_H
+#ifndef OPEN62541_UA_OPENSSLCA_CA_H
+#define OPEN62541_UA_OPENSSLCA_CA_H
 
-#include "ua_plugin_ca.h"
-#include "ua_plugin_log.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#ifdef UA_ENABLE_CA
+#include "ua_plugin_ca.h"
+
+#ifdef UA_ENABLE_GDS
 
 UA_EXPORT UA_StatusCode UA_CreateGDSCertificateGroup(UA_GDSCertificateGroup *scg,
                                                      int privateKeySizeCA,
@@ -24,4 +24,4 @@ UA_EXPORT UA_StatusCode UA_CreateGDSCertificateGroup(UA_GDSCertificateGroup *scg
 }
 #endif
 
-#endif //OPEN62541_UA_MBEDTLS_CA_H
+#endif //OPEN62541_UA_OPENSSLCA_CA_H

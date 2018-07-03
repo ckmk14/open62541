@@ -100,6 +100,10 @@ if(UA_ENABLE_ENCRYPTION)
     add_example(client_basic256sha256 encryption/client_basic256sha256.c)
 endif()
 
+if(UA_ENABLE_GDS)
+    add_example(gds_example gds/openssl_example.c)
+endif()
+
 add_example(custom_datatype_client custom_datatype/client_types_custom.c)
 add_example(custom_datatype_server custom_datatype/server_types_custom.c)
 
