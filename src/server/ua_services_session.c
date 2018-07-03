@@ -249,7 +249,7 @@ Service_ActivateSession(UA_Server *server, UA_SecureChannel *channel,
                                                      &session->sessionHandle);
     if(response->responseHeader.serviceResult != UA_STATUSCODE_GOOD) {
         UA_LOG_INFO_SESSION(server->config.logger, session,
-                            "ActivateSession: Could not generate a server nonce");
+                            "ActivateSession: Could not generate a server nonce1");
         return;
     }
 
@@ -273,7 +273,7 @@ Service_ActivateSession(UA_Server *server, UA_SecureChannel *channel,
         UA_Session_detachFromSecureChannel(session);
         session->activated = false;
         UA_LOG_INFO_SESSION(server->config.logger, session,
-                            "ActivateSession: Could not generate a server nonce");
+                            "ActivateSession: Could not generate a server nonce2");
         return;
     }
 

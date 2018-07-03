@@ -762,6 +762,37 @@ deleteMembers_sp_basic128rsa15(UA_SecurityPolicy *securityPolicy) {
  * const char * a  the pointed data cannot be written to using the pointer a
  * */
 
+
+static int write_private_key( mbedtls_pk_context *key, const char *output_file )
+{
+    int ret;
+    FILE *f;
+    unsigned char output_buf[16000];
+    unsigned char *c = output_buf;
+    size_t len = 0;
+
+    memset(output_buf, 0, 16000);
+
+        if( ( ret = mbedtls_pk_write_key_der( key, output_buf, 16000 ) ) < 0 )
+            return( ret );
+
+        len = (size_t) ret;
+        c = output_buf + sizeof(output_buf) - len;
+
+    if( ( f = fopen( output_file, "wb" ) ) == NULL )
+        return( -1 );
+
+    if( fwrite( c, 1, len, f ) != len )
+    {
+        fclose( f );
+        return( -1 );
+    }
+
+    fclose( f );
+
+    return( 0 );
+}
+
 static UA_StatusCode
 updateCertificateAndPrivateKey_sp_basic128rsa15(UA_SecurityPolicy *securityPolicy,
                                                 const UA_ByteString newCertificate,
@@ -772,6 +803,8 @@ updateCertificateAndPrivateKey_sp_basic128rsa15(UA_SecurityPolicy *securityPolic
     if(securityPolicy->policyContext == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
 
+    Basic128Rsa15_PolicyContext *pc = (Basic128Rsa15_PolicyContext *)securityPolicy->policyContext;
+    write_private_key(&pc->localPrivateKey, "/home/kocybi/open62541/cmake-build-debug/examples/test.der");
 
     UA_ByteString_deleteMembers(&securityPolicy->localCertificate);
 
@@ -782,8 +815,7 @@ updateCertificateAndPrivateKey_sp_basic128rsa15(UA_SecurityPolicy *securityPolic
     securityPolicy->localCertificate.data[newCertificate.length] = '\0';
     securityPolicy->localCertificate.length--;
 
-    Basic128Rsa15_PolicyContext *pc = (Basic128Rsa15_PolicyContext *)securityPolicy->policyContext;
-    /* Set the private key */
+    /* Set the new private key */
     mbedtls_pk_free(&pc->localPrivateKey);
     mbedtls_pk_init(&pc->localPrivateKey);
     int mbedErr = mbedtls_pk_parse_key(&pc->localPrivateKey,
@@ -793,6 +825,7 @@ updateCertificateAndPrivateKey_sp_basic128rsa15(UA_SecurityPolicy *securityPolic
     if(retval != UA_STATUSCODE_GOOD)
         goto error;
 
+    write_private_key(&pc->localPrivateKey, "/home/kocybi/open62541/cmake-build-debug/examples/test2.der");
     retval = asym_makeThumbprint_sp_basic128rsa15(pc->securityPolicy,
                                                   &securityPolicy->localCertificate,
                                                   &pc->localCertThumbprint);
@@ -801,7 +834,7 @@ updateCertificateAndPrivateKey_sp_basic128rsa15(UA_SecurityPolicy *securityPolic
 
     return retval;
 
-    error:
+error:
     UA_LOG_ERROR(securityPolicy->logger, UA_LOGCATEGORY_SECURITYPOLICY,
                  "Could not update certificate and private key");
     if(securityPolicy->policyContext != NULL)

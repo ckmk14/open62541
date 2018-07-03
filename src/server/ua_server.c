@@ -345,11 +345,18 @@ UA_Server_removeRepeatedCallback(UA_Server *server, UA_UInt64 callbackId) {
 
 /////////////////////////////////////
 #include <stdio.h>
+#include <ua_plugin_securitypolicy.h>
+#include <src_generated/ua_types_generated.h>
+
 void
 UA_Server_doMagic(UA_Server *server,
                   const UA_ByteString *certificate,
                   const UA_ByteString *privateKey) {
     printf("\nBegin\n");
+    UA_EndpointDescription *end= &server->config.endpoints[1].endpointDescription;
+    UA_String_deleteMembers(&end->serverCertificate);
+    UA_String_copy(certificate, &end->serverCertificate);
+
     UA_SecurityPolicy *policy = &server->config.endpoints[1].securityPolicy;
     policy->updateCertificateAndPrivateKey(policy, *certificate, *privateKey);
     printf("\nEnd\n");
