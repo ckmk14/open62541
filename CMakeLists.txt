@@ -231,6 +231,12 @@ if(UA_ENABLE_ENCRYPTION)
     # defined in /tools/cmake/FindMbedTLS.cmake.
     find_package(MbedTLS REQUIRED)
     list(APPEND open62541_LIBRARIES ${MBEDTLS_LIBRARIES})
+
+    # The recommended way is to install gnutls via the OS package manager. If
+    # that is not possible, manually compile gnutl and set the cmake variables
+    # defined in /tools/cmake/FindMbedTLS.cmake.
+    find_package(GnuTLS REQUIRED)
+    list(APPEND open62541_LIBRARIES ${GNUTLS_LIBRARIES})
 endif()
 
 if(NOT WIN32)
@@ -391,6 +397,7 @@ set(exported_headers ${PROJECT_BINARY_DIR}/src_generated/ua_config.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_log.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_network.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_access_control.h
+                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_trustlist.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_pki.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_securitypolicy.h
                      ${PROJECT_SOURCE_DIR}/include/ua_server_pubsub.h
@@ -502,9 +509,11 @@ set(default_plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_network_tcp.c
 )
 
 if(UA_ENABLE_ENCRYPTION)
-    list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic128rsa15.h
+    list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/plugins/ua_trustlist.h
+                                       ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic128rsa15.h
                                        ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic256sha256.h)
-    list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic128rsa15.c
+    list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_trustlist.c
+                                       ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic128rsa15.c
                                        ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic256sha256.c)
 endif()
 
