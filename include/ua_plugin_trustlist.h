@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 #include "ua_server.h"
+#include "ua_plugin_log.h"
 
 struct UA_TrustList;
 typedef struct UA_TrustList UA_TrustList;
@@ -19,11 +20,14 @@ typedef struct UA_TrustList UA_TrustList;
 
 struct UA_TrustList {
 
-    // PEM encoded trust list
-    UA_ByteString (*getTrustedCertificates) (UA_TrustList *tl);
+    UA_Logger logger;
 
-    // PEM encoded certificate revocation list
-    UA_ByteString (*getTrustedCrls) (UA_TrustList *tl);
+    size_t trustListSize;
+    UA_ByteString *trustedCertificates; //Array of DER encoded Certificates
+
+    size_t trustedCrlsSize;
+    UA_ByteString *trustedCrls; //Array of DER encoded CRLs
+
 
     UA_StatusCode (*addCertificate)(UA_TrustList *tl, UA_ByteString *certificate);
 

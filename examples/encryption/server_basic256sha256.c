@@ -41,9 +41,16 @@ int main(int argc, char* argv[]) {
     UA_ByteString *revocationList = NULL;
     size_t revocationListSize = 0;
 
+    UA_TrustList *tl = (UA_TrustList *) UA_malloc(sizeof (UA_TrustList));
+    UA_InitTrustList(tl, "/home/markus/open62541/cmake-build-debug/examples/trust",
+                     NULL, NULL);
+
+    UA_ByteString certificate2 = loadFile("/home/markus/open62541/cmake-build-debug/examples/uaexpert.der");
+    tl->addCertificate(tl, &certificate2);
+
     UA_ServerConfig *config =
         UA_ServerConfig_new_basic256sha256(4840, &certificate, &privateKey,
-                                          trustList, trustListSize,
+                                           tl->trustedCertificates, tl->trustListSize,
                                           revocationList, revocationListSize);
     UA_ByteString_deleteMembers(&certificate);
     UA_ByteString_deleteMembers(&privateKey);
@@ -55,6 +62,9 @@ int main(int argc, char* argv[]) {
                      "Could not create the server config");
         return 1;
     }
+
+    tl->deleteMembers(tl);
+
 
     UA_Server *server = UA_Server_new(config);
     UA_StatusCode retval = UA_Server_run(server, &running);

@@ -12,12 +12,11 @@ extern "C" {
 #endif
 
 #include "ua_plugin_trustlist.h"
-#include "ua_plugin_log.h"
 
 UA_EXPORT UA_StatusCode UA_InitTrustList(UA_TrustList *tl,
-                                      const UA_ByteString *trustList,  size_t trustListSize,
-                                      const UA_ByteString *trustedCrl, size_t trustedCrlsSize,
-                                      UA_Logger logger);
+                                        const char* pathToTrustListDir,
+                                        const char* pathToTrustCrlsDir,
+                                        UA_Logger logger);
 
 #ifdef __cplusplus
 }
