@@ -11,6 +11,7 @@
 #include <openssl/err.h>
 #include <openssl/pem.h>
 #include <openssl/conf.h>
+#include <openssl/x509_vfy.h>
 
 #define  CA_KEY_USAGE "critical,digitalSignature,keyCertSign,cRLSign"
 #define  CA_BASIC_CONSTRAINTS "critical,CA:TRUE"
@@ -178,7 +179,7 @@ static UA_StatusCode Create_CAContext(UA_GDSCertificateGroup *scg,
     X509_sign(cac->caCert, cac->caKey, EVP_sha256());
 
     FILE * f;
-    f = fopen("/home/kocybi/open62541/cmake-build-debug/examples/cacert.pem", "wb");
+    f = fopen("/home/markus/open62541/cmake-build-debug/examples/cacert.pem", "wb");
     PEM_write_X509(f, cac->caCert);
     fclose(f);
 
@@ -287,18 +288,119 @@ static UA_StatusCode certificateSigningRequest (UA_GDSCertificateGroup *scg,
     return UA_STATUSCODE_GOOD;
 }
 
+static void UA_Parse( void ){
+    FILE *fp = fopen("/home/markus/root/ca/intermediate/certs/client.cert.pem", "r");
+    if (!fp) {
+        fprintf(stderr, "unable to open");
+        return;
+    }
+
+    X509 *cert = PEM_read_X509(fp, NULL, NULL, NULL);
+    if (!cert) {
+        fprintf(stderr, "unable to parse certificate in");
+        fclose(fp);
+        return;
+    }
+
+    char *subj = X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0);
+
+    printf("%s", subj);
+
+    X509_free(cert);
+    fclose(fp);
+}
+
+int spc_x509verifycallback_t(int, X509_STORE_CTX *);
+
+int spc_x509verifycallback_t(int ok, X509_STORE_CTX *store){
+    if(!ok) {
+        printf("\nError %s\n", X509_verify_cert_error_string(store->error));
+    }
+    return ok;
+}
+
 UA_StatusCode
 UA_CreateGDSCertificateGroup(UA_GDSCertificateGroup *scg, int privateKeySizeCA,
                              size_t privateKeyExponent, UA_Logger logger) {
+    OpenSSL_add_all_algorithms();
 
     scg->logger = logger;
    // scg->certificateSigningRequest = certificateSigningRequest;
    // scg->deleteMembers = deleteMembers_GDSCertificateGroup;
 
 
-    BN_new();
-    printf("Hallo");
+    FILE *fp = fopen("/home/markus/root/test/client.cert.pem", "r");
+    if (!fp) {
+        fprintf(stderr, "unable to open");
+        return UA_STATUSCODE_GOOD;
+    }
+    X509 *cert = PEM_read_X509(fp, NULL, NULL, NULL);
+    if (!cert) {
+        fprintf(stderr, "unable to parse certificate in");
+        fclose(fp);
+        return UA_STATUSCODE_GOOD;
+    }
 
 
-    return Create_CAContext(scg, privateKeySizeCA, privateKeyExponent, "DEDE", "DE", "DE", 365);
+    FILE *fp2 = fopen("/home/markus/root/test/issuer/intermediate.cert.pem", "r");
+    if (!fp2) {
+        fprintf(stderr, "unable to open");
+        return UA_STATUSCODE_GOOD;
+    }
+    X509 *inter = PEM_read_X509(fp2, NULL, NULL, NULL);
+    if (!inter) {
+        fprintf(stderr, "unable to parse certificate in");
+        fclose(fp2);
+        return UA_STATUSCODE_GOOD;
+    }
+
+
+    STACK_OF(X509) *chain;
+    chain = sk_X509_new_null();
+    sk_X509_push(chain, inter);
+
+    X509_STORE *store;
+    X509_LOOKUP *lookup;
+    store = X509_STORE_new();
+
+    X509_STORE_set_verify_cb_func(store, spc_x509verifycallback_t);
+
+    lookup = X509_STORE_add_lookup(store, X509_LOOKUP_file());
+
+    X509_LOOKUP_load_file(lookup, "/home/markus/root/test/ca/ca.cert.pem", X509_FILETYPE_PEM);
+  //  X509_LOOKUP_add_dir(lookup,"/home/markus/root/test/ca",X509_FILETYPE_PEM);
+
+
+    X509_load_crl_file(lookup, "/home/markus/root/test/crl.pem", X509_FILETYPE_PEM);
+        X509_STORE_set_flags(store , X509_V_FLAG_CRL_CHECK| X509_V_FLAG_CRL_CHECK_ALL);
+
+    X509_STORE_CTX *ctx = X509_STORE_CTX_new();
+    X509_STORE_CTX_init(ctx, store, cert, chain);
+
+    int result = X509_verify_cert(ctx);
+
+    STACK_OF(X509) *chain2;
+
+    int j;
+    chain2 = X509_STORE_CTX_get1_chain(ctx);
+    printf("Chain:\n");
+        for (j = 0; j < sk_X509_num(chain2); j++) {
+            X509 *cert2 = sk_X509_value(chain2, j);
+            printf("depth=%d: ", j);
+            X509_NAME_print_ex_fp(stdout, X509_get_subject_name(cert2), 0,  0);
+            printf("\n");
+        }
+        sk_X509_pop_free(chain2, X509_free);
+    printf("\n%u\n", result);
+
+    X509_free(cert);
+    sk_X509_pop_free(chain, X509_free);
+  //  sk_X509_pop_free(crls, X509_free);
+    fclose(fp);
+    fclose(fp2);
+
+    X509_STORE_free(store);
+    X509_STORE_CTX_free(ctx);
+    return UA_STATUSCODE_GOOD;
+    //Create_CAContext(scg, privateKeySizeCA, privateKeyExponent, "DEDE", "DE", "DE", 365);
 }

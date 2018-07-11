@@ -65,10 +65,7 @@ int main(int argc, char* argv[]) {
     UA_GDSCertificateGroup *scg = (UA_GDSCertificateGroup *) UA_malloc(sizeof (UA_GDSCertificateGroup));
 
     UA_CreateGDSCertificateGroup(scg,2048, 65537, config->logger);
-    printf("%p", (void *) scg);
-    UA_Server *server = UA_Server_new(config);
-    UA_StatusCode retval = UA_Server_run(server, &running);
-    UA_Server_delete(server);
+
     UA_ServerConfig_delete(config);
-    return (int)retval;
+    return UA_STATUSCODE_GOOD;
 }
