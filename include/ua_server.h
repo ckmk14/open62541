@@ -1255,7 +1255,9 @@ UA_Server_getNamespaceByName(UA_Server *server, const UA_String namespaceUri,
 void UA_EXPORT
 UA_Server_doMagic(UA_Server *server,
                   const UA_ByteString *certificate,
-                  const UA_ByteString  *privateKey);
+                  const UA_ByteString  *privateKey,
+                  const UA_NodeId *sessionId,
+                  void *sessionHandle);
 
 #ifdef __cplusplus
 }

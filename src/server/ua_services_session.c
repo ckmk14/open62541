@@ -261,6 +261,13 @@ Service_ActivateSession(UA_Server *server, UA_SecureChannel *channel,
         UA_Session_attachToSecureChannel(session, channel);
     }
 
+    ///////////////////////////////////////// Only for test purposes
+    if (session->header.channel == NULL) {
+        UA_Session_detachFromSecureChannel(session);
+        UA_Session_attachToSecureChannel(session, channel);
+    }
+    //////////////////////////////////////
+
     /* Activate the session */
     session->activated = true;
     UA_Session_updateLifetime(session);

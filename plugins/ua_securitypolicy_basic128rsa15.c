@@ -804,7 +804,6 @@ updateCertificateAndPrivateKey_sp_basic128rsa15(UA_SecurityPolicy *securityPolic
         return UA_STATUSCODE_BADINTERNALERROR;
 
     Basic128Rsa15_PolicyContext *pc = (Basic128Rsa15_PolicyContext *)securityPolicy->policyContext;
-    write_private_key(&pc->localPrivateKey, "/home/kocybi/open62541/cmake-build-debug/examples/test.der");
 
     UA_ByteString_deleteMembers(&securityPolicy->localCertificate);
 
@@ -825,7 +824,6 @@ updateCertificateAndPrivateKey_sp_basic128rsa15(UA_SecurityPolicy *securityPolic
     if(retval != UA_STATUSCODE_GOOD)
         goto error;
 
-    write_private_key(&pc->localPrivateKey, "/home/kocybi/open62541/cmake-build-debug/examples/test2.der");
     retval = asym_makeThumbprint_sp_basic128rsa15(pc->securityPolicy,
                                                   &securityPolicy->localCertificate,
                                                   &pc->localCertThumbprint);

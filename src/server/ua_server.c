@@ -29,6 +29,8 @@
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS
 #include "ua_subscription.h"
+#include "ua_session.h"
+
 #endif
 
 /**********************/
@@ -347,17 +349,44 @@ UA_Server_removeRepeatedCallback(UA_Server *server, UA_UInt64 callbackId) {
 #include <stdio.h>
 #include <ua_plugin_securitypolicy.h>
 #include <src_generated/ua_types_generated.h>
+#include <ua_types.h>
 
+//Only for test purposes
 void
 UA_Server_doMagic(UA_Server *server,
                   const UA_ByteString *certificate,
-                  const UA_ByteString *privateKey) {
+                  const UA_ByteString *privateKey,
+                  const UA_NodeId *sessionId,
+                  void *sessionHandle) {
     printf("\nBegin\n");
-    UA_EndpointDescription *end= &server->config.endpoints[1].endpointDescription;
+    UA_EndpointDescription *end= &server->config.endpoints[2].endpointDescription;
     UA_String_deleteMembers(&end->serverCertificate);
     UA_String_copy(certificate, &end->serverCertificate);
-
-    UA_SecurityPolicy *policy = &server->config.endpoints[1].securityPolicy;
+    UA_SecurityPolicy *policy = &server->config.endpoints[2].securityPolicy;
     policy->updateCertificateAndPrivateKey(policy, *certificate, *privateKey);
+
+
+    UA_SessionManager *sm =   &server->sessionManager;
+    UA_SecureChannelManager *manager = &server->secureChannelManager;
+
+    printf("\nSessionCount: %u\n", (int) sm->currentSessionCount);
+
+
+    UA_Session *session = UA_SessionManager_getSessionById(sm, sessionId);
+    session_list_entry *current = NULL;
+    LIST_FOREACH(current, &sm->sessions, pointers) {
+        /* Token does not match */
+        if(UA_NodeId_equal(&current->session.sessionId, sessionId)) {
+            continue;
+        }
+        printf("Session will be closed:");
+        printf(UA_PRINTF_GUID_FORMAT, UA_PRINTF_GUID_DATA(current->session.sessionId.identifier.guid));
+        printf("/n");
+        UA_SecureChannel *channel = current->session.header.channel;
+
+        UA_SecureChannelManager_close(manager, channel->securityToken.channelId);
+    }
+
+
     printf("\nEnd\n");
 }
