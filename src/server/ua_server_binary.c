@@ -14,6 +14,7 @@
  *    Copyright 2017 (c) Mark Giraud, Fraunhofer IOSB
  */
 
+#include <ua_types.h>
 #include "ua_util.h"
 #include "ua_server_internal.h"
 #include "ua_services.h"
@@ -331,6 +332,8 @@ processHEL(UA_Server *server, UA_Connection *connection,
     return connection->send(connection, &ack_msg);
 }
 
+#include "ua_securitypolicy_basic128rsa15.h"
+
 /* OPN -> Open up/renew the securechannel */
 static UA_StatusCode
 processOPN(UA_Server *server, UA_SecureChannel *channel,
@@ -342,6 +345,14 @@ processOPN(UA_Server *server, UA_SecureChannel *channel,
     UA_OpenSecureChannelRequest openSecureChannelRequest;
     retval |= UA_NodeId_decodeBinary(msg, &offset, &requestType);
     retval |= UA_OpenSecureChannelRequest_decodeBinary(msg, &offset, &openSecureChannelRequest);
+
+    Basic128Rsa15_PolicyContext *pc = (Basic128Rsa15_PolicyContext *) channel->securityPolicy->policyContext;
+
+    printf("Policy: %s\n", (char *)channel->securityPolicy->policyUri.data);
+    printf("Policy Address: %p\n", (void *) channel->securityPolicy);
+    printf("Pointer certificate: %p\n", (void *)&channel->securityPolicy->localCertificate);
+    printf("Pointer certificate Data: %p\n", (void *)channel->securityPolicy->localCertificate.data);
+    printf("OPN LÄNGE: %u\n", (int) channel->securityPolicy->localCertificate.length);
 
     /* Error occurred */
     if(retval != UA_STATUSCODE_GOOD ||
@@ -626,7 +637,7 @@ static UA_StatusCode
 createSecureChannel(void *application, UA_Connection *connection,
                     UA_AsymmetricAlgorithmSecurityHeader *asymHeader) {
     UA_Server *server = (UA_Server*)application;
-
+    int test = 0;
     /* Iterate over available endpoints and choose the correct one */
     UA_Endpoint *endpoint = NULL;
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
@@ -635,9 +646,14 @@ createSecureChannel(void *application, UA_Connection *connection,
         if(!UA_ByteString_equal(&asymHeader->securityPolicyUri,
                                 &endpointCandidate->securityPolicy.policyUri))
             continue;
+
+
+
         retval = endpointCandidate->securityPolicy.asymmetricModule.
             compareCertificateThumbprint(&endpointCandidate->securityPolicy,
                                          &asymHeader->receiverCertificateThumbprint);
+
+        test = 1;
         if(retval != UA_STATUSCODE_GOOD)
             continue;
 
@@ -647,6 +663,9 @@ createSecureChannel(void *application, UA_Connection *connection,
         endpoint = endpointCandidate;
         break;
     }
+    if (!endpoint && test)
+        return UA_STATUSCODE_BADCERTIFICATEINVALID;
+
 
     if(!endpoint)
         return UA_STATUSCODE_BADSECURITYPOLICYREJECTED;

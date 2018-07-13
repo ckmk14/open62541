@@ -959,3 +959,4 @@ set_target_properties(open62541-generator-types PROPERTIES FOLDER "open62541/gen
 add_definitions("-Wno-unused-function")
 add_definitions("-Wno-unused-variable")
 add_definitions("-Wno-unused-but-set-variable")
+add_definitions("-Wno-cast-qual")

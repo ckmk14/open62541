@@ -351,7 +351,7 @@ UA_Server_removeRepeatedCallback(UA_Server *server, UA_UInt64 callbackId) {
 #include <src_generated/ua_types_generated.h>
 #include <ua_types.h>
 
-//Only for test purposes
+
 void
 UA_Server_doMagic(UA_Server *server,
                   const UA_ByteString *certificate,
@@ -359,19 +359,9 @@ UA_Server_doMagic(UA_Server *server,
                   const UA_NodeId *sessionId,
                   void *sessionHandle) {
     printf("\nBegin\n");
-    UA_EndpointDescription *end= &server->config.endpoints[2].endpointDescription;
-    UA_String_deleteMembers(&end->serverCertificate);
-    UA_String_copy(certificate, &end->serverCertificate);
-    UA_SecurityPolicy *policy = &server->config.endpoints[2].securityPolicy;
-    policy->updateCertificateAndPrivateKey(policy, *certificate, *privateKey);
-
 
     UA_SessionManager *sm =   &server->sessionManager;
     UA_SecureChannelManager *manager = &server->secureChannelManager;
-
-    printf("\nSessionCount: %u\n", (int) sm->currentSessionCount);
-
-
     UA_Session *session = UA_SessionManager_getSessionById(sm, sessionId);
     session_list_entry *current = NULL;
     LIST_FOREACH(current, &sm->sessions, pointers) {
@@ -381,12 +371,72 @@ UA_Server_doMagic(UA_Server *server,
         }
         printf("Session will be closed:");
         printf(UA_PRINTF_GUID_FORMAT, UA_PRINTF_GUID_DATA(current->session.sessionId.identifier.guid));
-        printf("/n");
+        printf("\n");
         UA_SecureChannel *channel = current->session.header.channel;
-
+     //   UA_Session_detachFromSecureChannel(session);
         UA_SecureChannelManager_close(manager, channel->securityToken.channelId);
     }
 
 
     printf("\nEnd\n");
 }
+
+
+
+
+//It is working
+////Only for test purposes
+//void
+//UA_Server_doMagic(UA_Server *server,
+//                  const UA_ByteString *certificate,
+//                  const UA_ByteString *privateKey,
+//                  const UA_NodeId *sessionId,
+//                  void *sessionHandle) {
+//    printf("\nBegin\n");
+//
+//
+//
+////////////
+/////
+/////
+///// UA_String_copy(&localCertificate, &endpoint->endpointDescription.serverCertificate);
+////    UA_ApplicationDescription_copy(&conf->applicationDescription,
+//           //                       &endpoint->endpointDescription.server);
+///// /////////
+//    UA_SessionManager *sm =   &server->sessionManager;
+//    UA_SecureChannelManager *manager = &server->secureChannelManager;
+//
+//    printf("\nSessionCount: %u\n", (int) sm->currentSessionCount);
+//
+//
+//    UA_Session *session = UA_SessionManager_getSessionById(sm, sessionId);
+//    session_list_entry *current = NULL;
+//    LIST_FOREACH(current, &sm->sessions, pointers) {
+//        /* Token does not match */
+//        if(UA_NodeId_equal(&current->session.sessionId, sessionId)) {
+//            continue;
+//        }
+//        printf("Session will be closed:");
+//        printf(UA_PRINTF_GUID_FORMAT, UA_PRINTF_GUID_DATA(current->session.sessionId.identifier.guid));
+//        printf("\n");
+//        UA_SecureChannel *channel = current->session.header.channel;
+//
+//        UA_SecureChannelManager_close(manager, channel->securityToken.channelId);
+//    }
+//
+//    UA_EndpointDescription *end1= &server->config.endpoints[1].endpointDescription;
+//    UA_String_deleteMembers(&end1->serverCertificate);
+//    UA_String_copy(certificate, &end1->serverCertificate);
+//    UA_SecurityPolicy *policy1 = &server->config.endpoints[1].securityPolicy;
+//    printf("Policy Address: %p\n", (void *) policy1);
+//    policy1->updateCertificateAndPrivateKey(policy1, *certificate, *privateKey);
+//
+//
+//    UA_EndpointDescription *end= &server->config.endpoints[2].endpointDescription;
+//    UA_String_deleteMembers(&end->serverCertificate);
+//    UA_String_copy(certificate, &end->serverCertificate);
+//    UA_SecurityPolicy *policy = &server->config.endpoints[2].securityPolicy;
+//    printf("Policy Address: %p\n", (void *) policy);
+//    policy->updateCertificateAndPrivateKey(policy, *certificate, *privateKey);
+//    printf("\nEnd\n");
+//}

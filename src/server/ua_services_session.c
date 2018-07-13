@@ -261,12 +261,14 @@ Service_ActivateSession(UA_Server *server, UA_SecureChannel *channel,
         UA_Session_attachToSecureChannel(session, channel);
     }
 
-    ///////////////////////////////////////// Only for test purposes
+    /* This code snippet is necessary if the server is canceling SecureChannels via the
+     * UA_SecureChannelManager_close - function. In such a case a Client wants reconnecting to a Session
+     * via a new SecureChannel. If the Client proves the possesion of the ServerNonce (from the last
+     * ActivateSession response) it is legit to connect the session to the new SecureChannel.
+     * */
     if (session->header.channel == NULL) {
-        UA_Session_detachFromSecureChannel(session);
         UA_Session_attachToSecureChannel(session, channel);
     }
-    //////////////////////////////////////
 
     /* Activate the session */
     session->activated = true;

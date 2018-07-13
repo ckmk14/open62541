@@ -10,6 +10,8 @@
  *    Copyright 2018 (c) Fabian Arndt, Root-Core
  */
 
+#include <ua_plugin_securitypolicy.h>
+#include <ua_types.h>
 #include "ua_plugin_securitypolicy.h"
 #include "ua_config_default.h"
 #include "ua_client_config.h"
@@ -407,6 +409,9 @@ UA_ServerConfig_new_basic128rsa15(UA_UInt16 portNumber,
     /* Populate the endpoints */
     ++conf->endpointsSize;
     retval = createSecurityPolicyNoneEndpoint(conf, &conf->endpoints[0], *certificate);
+    printf("Policy Address: %p\n", (void *) &conf->endpoints[0].securityPolicy);
+    printf("LocalCertificate Address: %p\n", (void *) &conf->endpoints[0].securityPolicy.localCertificate);
+    printf("LocalCertificate Data Address: %p\n", (void *) conf->endpoints[0].securityPolicy.localCertificate.data);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_ServerConfig_delete(conf);
         return NULL;
@@ -416,6 +421,9 @@ UA_ServerConfig_new_basic128rsa15(UA_UInt16 portNumber,
     retval = createSecurityPolicyBasic128Rsa15Endpoint(conf, &conf->endpoints[1],
                                                        UA_MESSAGESECURITYMODE_SIGN, *certificate,
                                                        *privateKey);
+    printf("Policy Address: %p\n", (void *) &conf->endpoints[1].securityPolicy);
+    printf("LocalCertificate Address: %p\n", (void *) &conf->endpoints[1].securityPolicy.localCertificate);
+    printf("LocalCertificate Data Address: %p\n", (void *) conf->endpoints[1].securityPolicy.localCertificate.data);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_ServerConfig_delete(conf);
         return NULL;
@@ -425,6 +433,9 @@ UA_ServerConfig_new_basic128rsa15(UA_UInt16 portNumber,
     retval = createSecurityPolicyBasic128Rsa15Endpoint(conf, &conf->endpoints[2],
                                                        UA_MESSAGESECURITYMODE_SIGNANDENCRYPT, *certificate,
                                                        *privateKey);
+    printf("Policy Address: %p\n", (void *) &conf->endpoints[2].securityPolicy);
+    printf("LocalCertificate Address: %p\n", (void *) &conf->endpoints[2].securityPolicy.localCertificate);
+    printf("LocalCertificate Data Address: %p\n", (void *) conf->endpoints[2].securityPolicy.localCertificate.data);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_ServerConfig_delete(conf);
         return NULL;

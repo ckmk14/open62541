@@ -5,15 +5,8 @@
  *    Copyright 2018 (c) Mark Giraud, Fraunhofer IOSB
  */
 
-#include <mbedtls/aes.h>
-#include <mbedtls/md.h>
-#include <mbedtls/x509_crt.h>
-#include <mbedtls/ctr_drbg.h>
-#include <mbedtls/entropy.h>
-#include <mbedtls/entropy_poll.h>
-#include <mbedtls/error.h>
-#include <mbedtls/version.h>
-#include <mbedtls/sha1.h>
+
+#include <ua_types.h>
 
 #include "ua_plugin_pki.h"
 #include "ua_plugin_securitypolicy.h"
@@ -54,15 +47,6 @@
         return errorcode;                                               \
     }
 
-typedef struct {
-    const UA_SecurityPolicy *securityPolicy;
-    UA_ByteString localCertThumbprint;
-
-    mbedtls_ctr_drbg_context drbgContext;
-    mbedtls_entropy_context entropyContext;
-    mbedtls_md_context_t sha1MdContext;
-    mbedtls_pk_context localPrivateKey;
-} Basic128Rsa15_PolicyContext;
 
 typedef struct {
     Basic128Rsa15_PolicyContext *policyContext;
@@ -761,38 +745,6 @@ deleteMembers_sp_basic128rsa15(UA_SecurityPolicy *securityPolicy) {
  * char * const a the pointer is constant and immutable but the pointed data is not
  * const char * a  the pointed data cannot be written to using the pointer a
  * */
-
-
-static int write_private_key( mbedtls_pk_context *key, const char *output_file )
-{
-    int ret;
-    FILE *f;
-    unsigned char output_buf[16000];
-    unsigned char *c = output_buf;
-    size_t len = 0;
-
-    memset(output_buf, 0, 16000);
-
-        if( ( ret = mbedtls_pk_write_key_der( key, output_buf, 16000 ) ) < 0 )
-            return( ret );
-
-        len = (size_t) ret;
-        c = output_buf + sizeof(output_buf) - len;
-
-    if( ( f = fopen( output_file, "wb" ) ) == NULL )
-        return( -1 );
-
-    if( fwrite( c, 1, len, f ) != len )
-    {
-        fclose( f );
-        return( -1 );
-    }
-
-    fclose( f );
-
-    return( 0 );
-}
-
 static UA_StatusCode
 updateCertificateAndPrivateKey_sp_basic128rsa15(UA_SecurityPolicy *securityPolicy,
                                                 const UA_ByteString newCertificate,
@@ -805,6 +757,10 @@ updateCertificateAndPrivateKey_sp_basic128rsa15(UA_SecurityPolicy *securityPolic
 
     Basic128Rsa15_PolicyContext *pc = (Basic128Rsa15_PolicyContext *)securityPolicy->policyContext;
 
+    printf("1. LÄNGE: %u\n", (int) securityPolicy->localCertificate.length);
+    printf("Pointer certificate: %p\n", (void *)&securityPolicy->localCertificate);
+    printf("Pointer certificate Data: %p\n", (void *)securityPolicy->localCertificate.data);
+
     UA_ByteString_deleteMembers(&securityPolicy->localCertificate);
 
     UA_StatusCode retval = UA_ByteString_allocBuffer(&securityPolicy->localCertificate, newCertificate.length + 1);
@@ -813,6 +769,10 @@ updateCertificateAndPrivateKey_sp_basic128rsa15(UA_SecurityPolicy *securityPolic
     memcpy(securityPolicy->localCertificate.data, newCertificate.data, newCertificate.length);
     securityPolicy->localCertificate.data[newCertificate.length] = '\0';
     securityPolicy->localCertificate.length--;
+
+    printf("3. LÄNGE: %u\n", (int) securityPolicy->localCertificate.length);
+    printf("Pointer certificate: %p\n", (void *)&securityPolicy->localCertificate);
+    printf("Pointer certificate Data: %p\n",(void *) securityPolicy->localCertificate.data);
 
     /* Set the new private key */
     mbedtls_pk_free(&pc->localPrivateKey);
@@ -902,6 +862,7 @@ policyContext_newContext_sp_basic128rsa15(UA_SecurityPolicy *securityPolicy,
     retval = asym_makeThumbprint_sp_basic128rsa15(pc->securityPolicy,
                                                   &securityPolicy->localCertificate,
                                                   &pc->localCertThumbprint);
+
     if(retval != UA_STATUSCODE_GOOD)
         goto error;
 
@@ -914,6 +875,37 @@ error:
         deleteMembers_sp_basic128rsa15(securityPolicy);
     return retval;
 }
+
+static int write_private_key( mbedtls_pk_context *key, const char *output_file )
+{
+    int ret;
+    FILE *f;
+    unsigned char output_buf[16000];
+    unsigned char *c = output_buf;
+    size_t len = 0;
+
+    memset(output_buf, 0, 16000);
+
+    if( ( ret = mbedtls_pk_write_key_der( key, output_buf, 16000 ) ) < 0 )
+        return( ret );
+
+    len = (size_t) ret;
+    c = output_buf + sizeof(output_buf) - len;
+
+    if( ( f = fopen( output_file, "wb" ) ) == NULL )
+        return( -1 );
+
+    if( fwrite( c, 1, len, f ) != len )
+    {
+        fclose( f );
+        return( -1 );
+    }
+
+    fclose( f );
+
+    return( 0 );
+}
+
 
 UA_StatusCode
 UA_SecurityPolicy_Basic128Rsa15(UA_SecurityPolicy *policy, UA_CertificateVerification *certificateVerification,

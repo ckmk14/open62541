@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/types.h>
+#include <open62541.h>
+
 UA_Boolean running = true;
 static void stopHandler(int sig) {
     UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "received ctrl-c");
@@ -25,8 +27,8 @@ helloWorldMethodCallback(UA_Server *server,
     UA_String tmp = UA_STRING_ALLOC("Hello ");
     UA_Variant_setScalarCopy(output, &tmp, &UA_TYPES[UA_TYPES_STRING]);
     UA_String_deleteMembers(&tmp);
-    UA_ByteString certificate = loadFile("/home/kocybi/open62541/cmake-build-debug/examples/server_cert2.der");
-    UA_ByteString privateKey = loadFile("/home/kocybi/open62541/cmake-build-debug/examples/server_key2.der");
+    UA_ByteString certificate = loadFile("/home/markus/open62541/cmake-build-debug/examples/server_cert2.der");
+    UA_ByteString privateKey = loadFile("/home/markus/open62541/cmake-build-debug/examples/server_key2.der");
 
     UA_Server_doMagic(server, &certificate, &privateKey, sessionId, sessionHandle);
 
@@ -67,8 +69,8 @@ int main(int argc, char* argv[]) {
     signal(SIGTERM, stopHandler);
 
     /* Load certificate and private key */
-    UA_ByteString certificate = loadFile("/home/kocybi/open62541/cmake-build-debug/examples/server_cert.der");
-    UA_ByteString privateKey = loadFile("/home/kocybi/open62541/cmake-build-debug/examples/server_key.der");
+    UA_ByteString certificate = loadFile("/home/markus/open62541/cmake-build-debug/examples/server_cert.der");
+    UA_ByteString privateKey = loadFile("/home/markus/open62541/cmake-build-debug/examples/server_key.der");
 
     /* Load the trustlist */
     size_t trustListSize = 0;
