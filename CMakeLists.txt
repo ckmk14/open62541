@@ -169,6 +169,9 @@ endif()
 option(UA_ENABLE_MULTITHREADING "Enable multithreading (experimental)" OFF)
 mark_as_advanced(UA_ENABLE_MULTITHREADING)
 
+option(UA_ENABLE_GDS "Enable GDS (experimental/ uses GnuTLS)" OFF)
+mark_as_advanced(UA_ENABLE_GDS)
+
 option(UA_ENABLE_IMMUTABLE_NODES "Nodes in the information model are not edited but copied and replaced" OFF)
 mark_as_advanced(UA_ENABLE_IMMUTABLE_NODES)
 if(UA_ENABLE_MULTITHREADING)
@@ -292,6 +295,14 @@ if(UA_ENABLE_ENCRYPTION)
     list(APPEND open62541_LIBRARIES ${MBEDTLS_LIBRARIES})
 endif()
 
+if(UA_ENABLE_GDS)
+    # The recommended way is to install GnuTLS via the OS package manager. If
+    # that is not possible, manually compile GnuTLS and set the cmake variables
+    # defined in /tools/cmake/FindGnuTLS.cmake.
+    find_package(GnuTLS REQUIRED)
+    list(APPEND open62541_LIBRARIES ${GNUTLS_LIBRARIES})
+endif()
+
 #####################
 # Compiler Settings #
 #####################
@@ -388,6 +399,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include
                     ${PROJECT_SOURCE_DIR}/plugins
                     ${PROJECT_SOURCE_DIR}/deps
                     ${PROJECT_SOURCE_DIR}/src/pubsub
+                    ${PROJECT_SOURCE_DIR}/src/gds
                     ${PROJECT_BINARY_DIR}
                     ${PROJECT_BINARY_DIR}/src_generated
                     ${MBEDTLS_INCLUDE_DIRS})
@@ -420,6 +432,7 @@ set(exported_headers ${exported_headers}
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_securitypolicy.h
                      ${PROJECT_SOURCE_DIR}/include/ua_server_pubsub.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_pubsub.h
+                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_ca.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_nodestore.h
                      ${PROJECT_SOURCE_DIR}/include/ua_server_config.h
                      ${PROJECT_SOURCE_DIR}/include/ua_client_config.h
@@ -532,6 +545,14 @@ endif()
 if(UA_ENABLE_PUBSUB)
     list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/plugins/ua_network_pubsub_udp.h)
     list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_network_pubsub_udp.c)
+endif()
+
+
+if(UA_ENABLE_GDS)
+    #This should go into the internal_headers (test purposes)
+    list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/src/gds/ua_ca_gnutls.h)
+    #This should go into the lib_sources (test purposes)
+    list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/src/gds/ua_ca_gnutls.c)
 endif()
 
 
