@@ -46,7 +46,10 @@ int main(int argc, char* argv[]) {
                                                trustList, trustListSize,
                                                revocationList, revocationListSize);
 
-    UA_InitCA(NULL, config->logger);
+    UA_GDSCertificateGroup scg;
+    UA_String name = UA_STRING("O=open62541,CN=open62541Server@localhost");
+    UA_InitCA(&scg, name, config->logger);
+    scg.deleteMembers(&scg);
 
     UA_ByteString_deleteMembers(&certificate);
     UA_ByteString_deleteMembers(&privateKey);
