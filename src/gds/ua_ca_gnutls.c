@@ -6,7 +6,9 @@
 
 #include "ua_ca_gnutls.h"
 #include <gnutls/x509.h>
-#include <ua_types.h>
+#include "ua_types.h"
+#include "libc_time.h"
+#include <time.h>
 
 #ifdef UA_ENABLE_GDS
 
@@ -27,10 +29,12 @@
         return errorcode;                                               \
     }
 
+
 typedef struct {
     gnutls_x509_crt_t ca_crt;
     gnutls_x509_privkey_t ca_key;
 } CaContext;
+
 
 static void deleteMembers_gnutls(UA_GDSCertificateGroup *cg) {
     if(cg == NULL)
@@ -49,7 +53,7 @@ static void deleteMembers_gnutls(UA_GDSCertificateGroup *cg) {
 }
 
 
-static UA_StatusCode generate_private_key_int(UA_GDSCertificateGroup *scg,
+static UA_StatusCode generate_private_key(UA_GDSCertificateGroup *scg,
                                               gnutls_x509_privkey_t *privKey,
                                               unsigned int bits) {
 
@@ -63,7 +67,6 @@ static UA_StatusCode generate_private_key_int(UA_GDSCertificateGroup *scg,
 }
 
 
-
 static void save_x509(gnutls_x509_crt_t crt, const char *loc) {
     gnutls_datum_t crtdata = {0};
     gnutls_x509_crt_export(crt, GNUTLS_X509_FMT_DER, NULL, (size_t*)&crtdata.size);
@@ -73,11 +76,12 @@ static void save_x509(gnutls_x509_crt_t crt, const char *loc) {
     fwrite(crtdata.data, crtdata.size, 1, f);
     fclose(f);
     free(crtdata.data);
-
 }
+
 
 static UA_StatusCode create_caContext(UA_GDSCertificateGroup *scg,
                                       UA_String caName,
+                                      int caDays,
                                       UA_Logger logger) {
     UA_StatusCode ret = UA_STATUSCODE_GOOD;
 
@@ -94,7 +98,7 @@ static UA_StatusCode create_caContext(UA_GDSCertificateGroup *scg,
     /* Initialize the CaContext */
     memset(cc, 0, sizeof(CaContext));
     gnutls_x509_crt_init (&cc->ca_crt);
-    generate_private_key_int(scg, &cc->ca_key, 2048);
+    generate_private_key(scg, &cc->ca_key, 2048);
 
     int gnuErr = gnutls_x509_crt_set_dn (cc->ca_crt, (char *) caName.data, NULL);
     UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
@@ -111,13 +115,13 @@ static UA_StatusCode create_caContext(UA_GDSCertificateGroup *scg,
     int crt_serial = rand();
     gnutls_x509_crt_set_serial(cc->ca_crt, &crt_serial, sizeof(int));
 
-    //This might be an issue
+    //TODO: This might be an issue (using time.h)
     gnuErr = gnutls_x509_crt_set_activation_time(cc->ca_crt, time(NULL));
     UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
     if(ret != UA_STATUSCODE_GOOD)
         goto error;
 
-    gnuErr = gnutls_x509_crt_set_expiration_time(cc->ca_crt, time(NULL) + (60 * 60 * 24 * 365 * 10));
+    gnuErr = gnutls_x509_crt_set_expiration_time(cc->ca_crt, time(NULL) + caDays);
     UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
     if(ret != UA_STATUSCODE_GOOD)
         goto error;
@@ -164,12 +168,80 @@ error:
 }
 
 
-UA_StatusCode UA_InitCA(UA_GDSCertificateGroup *scg, UA_String caName, UA_Logger logger) {
+void UA_createCSR(UA_GDSCertificateGroup *scg) {
+    printf("Hallo");
+
+    gnutls_x509_crq_t crq;
+    gnutls_x509_privkey_t key;
+    unsigned char buffer[10 * 1024];
+    size_t buffer_size = sizeof(buffer);
+   // unsigned int bits;
+
+    gnutls_global_init();
+
+    gnutls_x509_crq_init(&crq);
+    generate_private_key(scg, &key, 2048);
+    gnutls_x509_crq_set_version(crq, 1);
+
+    gnutls_x509_crq_set_key(crq, key);
+
+    UA_String name = UA_STRING("C=DE,O=open62541,CN=open62541Server@localhost");
+
+    int gnuErr = gnutls_x509_crq_set_dn(crq, (char *) name.data, NULL);
+    if (gnuErr)
+        printf("\ngnuTLS returned an error: %s\n", gnutls_strerror(gnuErr));
+
+    char * san1 = "localhost";
+    gnuErr = gnutls_x509_crq_set_subject_alt_name(crq, GNUTLS_SAN_DNSNAME,
+                                                      san1, (unsigned int)strlen(san1), GNUTLS_FSAN_APPEND);
+    if (gnuErr)
+        printf("\ngnuTLS returned an error: %s\n", gnutls_strerror(gnuErr));
+
+    char * san2 = "Q330";
+    gnuErr = gnutls_x509_crq_set_subject_alt_name(crq, GNUTLS_SAN_DNSNAME,
+                                                      san2, (unsigned int)strlen(san2), GNUTLS_FSAN_APPEND);
+    if (gnuErr)
+        printf("\ngnuTLS returned an error: %s\n", gnutls_strerror(gnuErr));
+
+    char * san3 = "urn:unconfigured:application";
+    gnuErr = gnutls_x509_crq_set_subject_alt_name(crq, GNUTLS_SAN_URI,
+                                                  san3, (unsigned int)strlen(san3), GNUTLS_FSAN_APPEND);
+    if (gnuErr)
+        printf("\ngnuTLS returned an error: %s\n", gnutls_strerror(gnuErr));
+
+    /* Self sign the certificate request.
+     */
+
+    gnutls_x509_crq_sign2(crq, key, GNUTLS_DIG_SHA1, 0);
+
+    /* Export the PEM encoded certificate request, and
+     * display it.
+     */
+    gnutls_x509_crq_export(crq, GNUTLS_X509_FMT_PEM, buffer,
+                           &buffer_size);
+
+    printf("Certificate Request: \n%s", buffer);
+
+
+    /* Export the PEM encoded private key, and
+     * display it.
+     */
+    buffer_size = sizeof(buffer);
+    gnutls_x509_privkey_export(key, GNUTLS_X509_FMT_PEM, buffer,
+                               &buffer_size);
+
+    printf("\n\nPrivate key: \n%s", buffer);
+
+    gnutls_x509_crq_deinit(crq);
+    gnutls_x509_privkey_deinit(key);
+}
+
+UA_StatusCode UA_InitCA(UA_GDSCertificateGroup *scg, UA_String caName, int caDays, UA_Logger logger) {
     memset(scg, 0, sizeof(UA_GDSCertificateGroup));
     scg->logger = logger;
     scg->deleteMembers = deleteMembers_gnutls;
 
-    return create_caContext(scg, caName, logger);
+    return create_caContext(scg, caName, caDays, logger);
 }
 
 #endif
