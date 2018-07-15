@@ -10,6 +10,7 @@
 #include "libc_time.h"
 #include <time.h>
 #include <ua_types.h>
+#include <gnutls/abstract.h>
 
 #ifdef UA_ENABLE_GDS
 
@@ -83,11 +84,12 @@ static void save_x509(gnutls_x509_crt_t crt, const char *loc) {
 
 static UA_StatusCode create_caContext(UA_GDSCertificateGroup *scg,
                                       UA_String caName,
-                                      int caDays,
+                                      unsigned int caDays,
+                                      int serialNumber,
                                       UA_Logger logger) {
     UA_StatusCode ret = UA_STATUSCODE_GOOD;
 
-    if(scg == NULL)
+    if(scg == NULL || serialNumber < 1)
         return UA_STATUSCODE_BADINTERNALERROR;
 
     CaContext *cc = (CaContext *) UA_malloc(sizeof(CaContext));
@@ -98,6 +100,7 @@ static UA_StatusCode create_caContext(UA_GDSCertificateGroup *scg,
     }
 
     /* Initialize the CaContext */
+    gnutls_global_init();
     memset(cc, 0, sizeof(CaContext));
     gnutls_x509_crt_init (&cc->ca_crt);
     generate_private_key(scg, &cc->ca_key, 2048);
@@ -114,8 +117,7 @@ static UA_StatusCode create_caContext(UA_GDSCertificateGroup *scg,
 
     gnutls_x509_crt_set_version(cc->ca_crt, 3);
 
-    //TODO: This might be an issue (using rand())
-    cc->serialNumber = rand();
+    cc->serialNumber = serialNumber;
     gnutls_x509_crt_set_serial(cc->ca_crt, &cc->serialNumber, sizeof(int));
 
     //TODO: This might be an issue (using time.h)
@@ -129,23 +131,45 @@ static UA_StatusCode create_caContext(UA_GDSCertificateGroup *scg,
     if(ret != UA_STATUSCODE_GOOD)
         goto error;
 
-    unsigned char buf[20] = {0}; // Normally 20 bytes (SHA1)
-    size_t size = 0;
-    gnutls_x509_crt_get_key_id(cc->ca_crt, 0, buf, &size);
-    gnuErr = gnutls_x509_crt_set_subject_key_id (cc->ca_crt, buf, size);
-    UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
-    if(ret != UA_STATUSCODE_GOOD)
-        goto error;
+/////////////////////////////////////////////////////////
+    //TODO: there is something wrong
 
-    gnuErr = gnutls_x509_crt_set_ca_status (cc->ca_crt, 1);
-    UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
-    if(ret != UA_STATUSCODE_GOOD)
-        goto error;
+    
 
-    gnuErr = gnutls_x509_crt_set_authority_key_id(cc->ca_crt, buf, size); //self signed
-    UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
-    if(ret != UA_STATUSCODE_GOOD)
-        goto error;
+
+    //  gnutls_pubkey_t pubKey;
+
+  //  unsigned char test[1024]; // Normally 20 bytes (SHA1)
+  //  size_t size;
+  //  gnuErr = gnutls_pubkey_import_privkey(pubKey, cc->ca_key,0,0);
+   // gnuErr = gnutls_pubkey_get_key_id(pubKey, 0, test, &size);
+
+
+
+
+
+//    UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
+//    if(ret != UA_STATUSCODE_GOOD)
+//        goto error;
+//
+//    gnuErr = gnutls_x509_crt_set_subject_key_id (cc->ca_crt, buf, size);
+//    UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
+//    if(ret != UA_STATUSCODE_GOOD)
+//        goto error;
+
+
+
+/////////////////////////////////////////////////////
+
+//    gnuErr = gnutls_x509_crt_set_ca_status (cc->ca_crt, 1);
+//    UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
+//    if(ret != UA_STATUSCODE_GOOD)
+//        goto error;
+//
+//    gnuErr = gnutls_x509_crt_set_authority_key_id(cc->ca_crt, buf, size); //self signed
+//    UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
+//    if(ret != UA_STATUSCODE_GOOD)
+//        goto error;
 
     gnuErr = gnutls_x509_crt_set_key_usage(cc->ca_crt,
                                            GNUTLS_KEY_DIGITAL_SIGNATURE
@@ -270,10 +294,12 @@ static UA_StatusCode csr_gnutls(UA_GDSCertificateGroup *scg,
     gnutls_x509_crt_init (&cert);
 
     // TODO: DN currently in CSR, not sure if this is always the case (Check .NET GDS)
-    char bufferDN[1024];
-    size_t bufferDN_size = sizeof(bufferDN);
-    gnuErr = gnutls_x509_crq_get_dn(crq, bufferDN, &bufferDN_size);
-    gnuErr = gnutls_x509_crt_set_dn (cert, bufferDN, NULL);
+    gnuErr = gnutls_x509_crt_set_crq(cert, crq);
+
+//    char bufferDN[1024];
+//    size_t bufferDN_size = sizeof(bufferDN);
+//    gnuErr = gnutls_x509_crq_get_dn(crq, bufferDN, &bufferDN_size);
+//    gnuErr = gnutls_x509_crt_set_dn (cert, bufferDN, NULL);
 
     gnutls_x509_crt_set_version(cert, 3);
 
@@ -281,6 +307,7 @@ static UA_StatusCode csr_gnutls(UA_GDSCertificateGroup *scg,
     int serialNumber = cc->serialNumber + 1;
     gnuErr = gnutls_x509_crt_set_serial(cert, &serialNumber, sizeof(int));
 
+    printf("\n%u\n", serialNumber);
     gnuErr = gnutls_x509_crt_set_activation_time(cert, time(NULL));
     gnuErr = gnutls_x509_crt_set_expiration_time(cert, time(NULL) + (60 * 60 * 24 * 365 * 5));
 
@@ -293,13 +320,10 @@ static UA_StatusCode csr_gnutls(UA_GDSCertificateGroup *scg,
                                            | GNUTLS_KEY_KEY_ENCIPHERMENT );
 
 
+    gnutls_x509_crt_set_key_purpose_oid (cert, GNUTLS_KP_TLS_WWW_SERVER, 0);
+    gnutls_x509_crt_set_key_purpose_oid (cert, GNUTLS_KP_TLS_WWW_CLIENT, 0);
 
-    gnuErr = gnutls_x509_crt_set_crq(cert, crq);
-    gnuErr = gnutls_x509_crt_sign2(cert, cc->ca_crt, cc->ca_key, GNUTLS_DIG_SHA256, 0);
-    save_x509(cert, "/home/markus/hope.cert");
-
-
-    //get SAN<
+    //get SAN from CSR
     unsigned int index = 0;
     char buffer[1024];
     size_t buffer_size = sizeof(buffer);
@@ -308,22 +332,31 @@ static UA_StatusCode csr_gnutls(UA_GDSCertificateGroup *scg,
     while (gnutls_x509_crq_get_subject_alt_name(crq, index, buffer,
                                                 &buffer_size, &sanType, &critical)
             != GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE) {
+        gnuErr = gnutls_x509_crt_set_subject_alt_name (cert,
+                                                       (gnutls_x509_subject_alt_name_t) sanType,
+                                                        buffer,
+                                                       (unsigned int) buffer_size,
+                                                       GNUTLS_FSAN_APPEND);
+
+        buffer_size = sizeof(buffer); //important otherwise there are parsing issues
         index++;
     }
-   printf("%u", index);
+
+    gnuErr = gnutls_x509_crt_sign2(cert, cc->ca_crt, cc->ca_key, GNUTLS_DIG_SHA256, 0);
+    save_x509(cert, "/home/markus/app.cert");
 
     gnutls_x509_crt_deinit(cert);
 
     return ret;
 }
 
-UA_StatusCode UA_InitCA(UA_GDSCertificateGroup *scg, UA_String caName, int caDays, UA_Logger logger) {
+UA_StatusCode UA_InitCA(UA_GDSCertificateGroup *scg, UA_String caName, unsigned int caDays, int sn, UA_Logger logger) {
     memset(scg, 0, sizeof(UA_GDSCertificateGroup));
     scg->logger = logger;
     scg->certificateSigningRequest = csr_gnutls;
     scg->deleteMembers = deleteMembers_gnutls;
 
-    return create_caContext(scg, caName, caDays, logger);
+    return create_caContext(scg, caName, caDays, sn,  logger);
 }
 
 #endif

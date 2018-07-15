@@ -48,12 +48,12 @@ int main(int argc, char* argv[]) {
     UA_ByteString csr;
     memset(&csr, 0, sizeof(UA_ByteString));
     UA_GDSCertificateGroup scg;
-    UA_String name = UA_STRING("O=open62541,CN=open62541Server@localhost");
-    UA_InitCA(&scg, name, (60 * 60 * 24 * 365 * 10) , config->logger);
-    UA_createCSR(&scg, &csr);
-    scg.certificateSigningRequest(&scg, &csr, NULL);
-    scg.deleteMembers(&scg);
+    UA_String name = UA_STRING("O=open62541,CN=GDS@localhost");
+    UA_InitCA(&scg, name, (60 * 60 * 24 * 365 * 10), 6000, config->logger);
+  //  UA_createCSR(&scg, &csr);
+  //  scg.certificateSigningRequest(&scg, &csr, NULL);
 
+    scg.deleteMembers(&scg);
     UA_ByteString_deleteMembers(&certificate);
     UA_ByteString_deleteMembers(&privateKey);
     for(size_t i = 0; i < trustListSize; i++)
