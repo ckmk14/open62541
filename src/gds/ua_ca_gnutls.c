@@ -9,6 +9,7 @@
 #include "ua_types.h"
 #include "libc_time.h"
 #include <time.h>
+#include <ua_types.h>
 
 #ifdef UA_ENABLE_GDS
 
@@ -33,6 +34,7 @@
 typedef struct {
     gnutls_x509_crt_t ca_crt;
     gnutls_x509_privkey_t ca_key;
+    int serialNumber;
 } CaContext;
 
 
@@ -112,8 +114,9 @@ static UA_StatusCode create_caContext(UA_GDSCertificateGroup *scg,
 
     gnutls_x509_crt_set_version(cc->ca_crt, 3);
 
-    int crt_serial = rand();
-    gnutls_x509_crt_set_serial(cc->ca_crt, &crt_serial, sizeof(int));
+    //TODO: This might be an issue (using rand())
+    cc->serialNumber = rand();
+    gnutls_x509_crt_set_serial(cc->ca_crt, &cc->serialNumber, sizeof(int));
 
     //TODO: This might be an issue (using time.h)
     gnuErr = gnutls_x509_crt_set_activation_time(cc->ca_crt, time(NULL));
@@ -168,14 +171,13 @@ error:
 }
 
 
-void UA_createCSR(UA_GDSCertificateGroup *scg) {
+void UA_createCSR(UA_GDSCertificateGroup *scg, UA_ByteString *csr) {
     printf("Hallo");
 
     gnutls_x509_crq_t crq;
     gnutls_x509_privkey_t key;
     unsigned char buffer[10 * 1024];
     size_t buffer_size = sizeof(buffer);
-   // unsigned int bits;
 
     gnutls_global_init();
 
@@ -211,34 +213,114 @@ void UA_createCSR(UA_GDSCertificateGroup *scg) {
 
     /* Self sign the certificate request.
      */
-
     gnutls_x509_crq_sign2(crq, key, GNUTLS_DIG_SHA1, 0);
 
-    /* Export the PEM encoded certificate request, and
-     * display it.
+    /* Export the PEM encoded certificate request, and display it.
      */
-    gnutls_x509_crq_export(crq, GNUTLS_X509_FMT_PEM, buffer,
-                           &buffer_size);
+    gnutls_x509_crq_export(crq, GNUTLS_X509_FMT_DER, buffer, &buffer_size);
 
-    printf("Certificate Request: \n%s", buffer);
+  //  printf("%u\n", (int)buffer_size);
 
+  //  printf("Certificate Request: \n%s", buffer);
+
+    UA_ByteString_allocBuffer(csr, buffer_size + 1);
+    memcpy(csr->data, buffer, buffer_size);
+    csr->data[buffer_size] = '\0';
+    csr->length--;
 
     /* Export the PEM encoded private key, and
      * display it.
      */
-    buffer_size = sizeof(buffer);
-    gnutls_x509_privkey_export(key, GNUTLS_X509_FMT_PEM, buffer,
-                               &buffer_size);
+   // buffer_size = sizeof(buffer);
+    //gnutls_x509_privkey_export(key, GNUTLS_X509_FMT_PEM, buffer,
+      //                         &buffer_size);
 
-    printf("\n\nPrivate key: \n%s", buffer);
+  //  printf("\n\nPrivate key: \n%s", buffer);
 
     gnutls_x509_crq_deinit(crq);
     gnutls_x509_privkey_deinit(key);
 }
 
+static UA_StatusCode csr_gnutls(UA_GDSCertificateGroup *scg,
+                         const UA_ByteString *certificateSigningRequest,
+                         UA_ByteString *const certificate) {
+
+    UA_StatusCode ret = UA_STATUSCODE_GOOD;
+
+    if(scg == NULL)
+        return UA_STATUSCODE_BADINTERNALERROR;
+
+    CaContext *cc = (CaContext *) scg->context;
+
+    gnutls_x509_crq_t crq;
+    gnutls_datum_t data = {NULL, 0};
+    data.data = certificateSigningRequest->data;
+    data.size = (unsigned int) certificateSigningRequest->length ;
+
+    gnutls_x509_crq_init(&crq);
+    gnutls_x509_crq_import(crq, &data, GNUTLS_X509_FMT_DER);
+
+    //verify signature of CSR
+    int gnuErr = gnutls_x509_crq_verify(crq, 0);
+    if (GNUTLS_E_PK_SIG_VERIFY_FAILED == gnuErr)
+        return UA_STATUSCODE_BADREQUESTNOTALLOWED;
+
+    //Create Certificate
+    gnutls_x509_crt_t cert;
+    gnutls_x509_crt_init (&cert);
+
+    // TODO: DN currently in CSR, not sure if this is always the case (Check .NET GDS)
+    char bufferDN[1024];
+    size_t bufferDN_size = sizeof(bufferDN);
+    gnuErr = gnutls_x509_crq_get_dn(crq, bufferDN, &bufferDN_size);
+    gnuErr = gnutls_x509_crt_set_dn (cert, bufferDN, NULL);
+
+    gnutls_x509_crt_set_version(cert, 3);
+
+    //TODO: overflow possible
+    int serialNumber = cc->serialNumber + 1;
+    gnuErr = gnutls_x509_crt_set_serial(cert, &serialNumber, sizeof(int));
+
+    gnuErr = gnutls_x509_crt_set_activation_time(cert, time(NULL));
+    gnuErr = gnutls_x509_crt_set_expiration_time(cert, time(NULL) + (60 * 60 * 24 * 365 * 5));
+
+    gnuErr = gnutls_x509_crt_set_ca_status (cert, 0);
+
+    gnuErr = gnutls_x509_crt_set_key_usage(cert,
+                                           GNUTLS_KEY_DIGITAL_SIGNATURE
+                                           | GNUTLS_KEY_NON_REPUDIATION
+                                           | GNUTLS_KEY_DATA_ENCIPHERMENT
+                                           | GNUTLS_KEY_KEY_ENCIPHERMENT );
+
+
+
+    gnuErr = gnutls_x509_crt_set_crq(cert, crq);
+    gnuErr = gnutls_x509_crt_sign2(cert, cc->ca_crt, cc->ca_key, GNUTLS_DIG_SHA256, 0);
+    save_x509(cert, "/home/markus/hope.cert");
+
+
+    //get SAN<
+    unsigned int index = 0;
+    char buffer[1024];
+    size_t buffer_size = sizeof(buffer);
+    unsigned int sanType;
+    unsigned int critical = 0;
+    while (gnutls_x509_crq_get_subject_alt_name(crq, index, buffer,
+                                                &buffer_size, &sanType, &critical)
+            != GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE) {
+        index++;
+    }
+   printf("%u", index);
+
+    gnutls_x509_crt_deinit(cert);
+
+    return ret;
+}
+
 UA_StatusCode UA_InitCA(UA_GDSCertificateGroup *scg, UA_String caName, int caDays, UA_Logger logger) {
     memset(scg, 0, sizeof(UA_GDSCertificateGroup));
     scg->logger = logger;
+    scg->certificateSigningRequest = csr_gnutls;
     scg->deleteMembers = deleteMembers_gnutls;
 
     return create_caContext(scg, caName, caDays, logger);

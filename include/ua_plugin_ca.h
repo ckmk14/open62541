@@ -26,7 +26,7 @@ typedef struct UA_GDSCertificateGroup UA_GDSCertificateGroup;
 struct UA_GDSCertificateGroup {
     void *context;
     UA_Logger logger;
-    UA_StatusCode (*certificateSigningRequest)(void *context,
+    UA_StatusCode (*certificateSigningRequest)(UA_GDSCertificateGroup *cg,
                                                const UA_ByteString *csr,
                                                UA_ByteString *const certificate);
     UA_StatusCode (*createNewKeyPair) (void *context,

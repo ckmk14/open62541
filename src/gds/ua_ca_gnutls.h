@@ -21,7 +21,7 @@ UA_EXPORT UA_StatusCode UA_InitCA(UA_GDSCertificateGroup *scg,
                                   int caDays,
                                   UA_Logger logger);
 //only test puposes
-UA_EXPORT void UA_createCSR(UA_GDSCertificateGroup *scg);
+UA_EXPORT void UA_createCSR(UA_GDSCertificateGroup *scg, UA_ByteString *csr);
 
 
 #endif /* UA_ENABLE_GDS */
