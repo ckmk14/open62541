@@ -6,11 +6,19 @@
 #include <errno.h>
 #include "open62541.h"
 #include "common.h"
+#include <gnutls/x509.h>
+#include <open62541.h>
 
 UA_Boolean running = true;
 static void stopHandler(int sig) {
     UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "received ctrl-c");
     running = false;
+}
+
+static void save_x509(UA_ByteString crt, const char *loc) {
+    FILE *f = fopen(loc, "w");
+    fwrite(crt.data, crt.length, 1, f);
+    fclose(f);
 }
 
 int main(int argc, char* argv[]) {
@@ -47,21 +55,29 @@ int main(int argc, char* argv[]) {
                                                revocationList, revocationListSize);
     UA_ByteString csr;
     memset(&csr, 0, sizeof(UA_ByteString));
-     UA_GDSCertificateGroup scg;
+    UA_GDSCertificateGroup scg;
 
     UA_String name = UA_STRING("O=open62541,CN=GDS@localhost");
     UA_String name2 = UA_STRING("C=DE,O=open62541,CN=open62541@localhost");
     UA_String name3 = UA_STRING("urn:unconfigured:application");
     UA_InitCA(&scg, name, (60 * 60 * 24 * 365 * 10), 6000, 2048, config->logger);
     UA_createCSR(&scg, &csr);
-    scg.certificateSigningRequest(&scg, &csr, 2048, NULL);
 
+    UA_ByteString cert1;
+    UA_ByteString cert2;
+
+    scg.certificateSigningRequest(&scg, &csr, 2048, &cert1);
 
     UA_ByteString passw;
     memset(&passw, 0, sizeof(UA_ByteString));
-    scg.createNewKeyPair(&scg, name2, NULL, NULL, 2048, NULL, 0, name3, NULL, &passw);
+    scg.createNewKeyPair(&scg, name2, NULL, NULL, 2048, NULL, 0, name3, &cert2, &passw);
+
+    save_x509(cert1, "/home/markus/app.der");
+    save_x509(cert2, "/home/markus/app2.der");
 
     scg.deleteMembers(&scg);
+    UA_ByteString_deleteMembers(&cert1);
+    UA_ByteString_deleteMembers(&cert2);
     UA_ByteString_deleteMembers(&passw);
     UA_ByteString_deleteMembers(&csr);
     printf("%p", (void *) &name);

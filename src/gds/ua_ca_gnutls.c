@@ -6,11 +6,6 @@
 
 #include "ua_ca_gnutls.h"
 #include <gnutls/x509.h>
-#include "ua_types.h"
-#include "libc_time.h"
-#include <time.h>
-#include <ua_types.h>
-#include <gnutls/abstract.h>
 
 #ifdef UA_ENABLE_GDS
 
@@ -177,7 +172,7 @@ static UA_StatusCode create_caContext(UA_GDSCertificateGroup *scg,
     if(gnuErr != UA_STATUSCODE_GOOD)
         goto error;
 
-      save_x509(cc->ca_crt, "/home/kocybi/ca.der");
+      save_x509(cc->ca_crt, "/home/markus/ca.der");
 //
 //    unsigned char buffer[10 * 1024];
 //    size_t buffer_size = sizeof(buffer);
@@ -250,7 +245,7 @@ void UA_createCSR(UA_GDSCertificateGroup *scg, UA_ByteString *csr) {
     size_t buf_size = sizeof(buf);
     gnutls_x509_privkey_export(key, GNUTLS_X509_FMT_DER, buf, &buf_size);
 
-    FILE *f = fopen("/home/kocybi/app_priv.der", "w");
+    FILE *f = fopen("/home/markus/app_priv.der", "w");
     fwrite(buf, buf_size, 1, f);
     fclose(f);
 
@@ -345,7 +340,6 @@ static UA_StatusCode csr_gnutls(UA_GDSCertificateGroup *scg,
     if(ret != UA_STATUSCODE_GOOD)
         goto deinit_csr;
 
-
     //    char bufferDN[1024];
     //    size_t bufferDN_size = sizeof(bufferDN);
     //    gnuErr = gnutls_x509_crq_get_dn(crq, bufferDN, &bufferDN_size);
@@ -386,7 +380,7 @@ static UA_StatusCode csr_gnutls(UA_GDSCertificateGroup *scg,
 
     //get SAN from CSR
     unsigned int index = 0;
-    char buffer[1024];
+    char buffer[1024 * 10];
     size_t buffer_size = sizeof(buffer);
     unsigned int sanType;
     unsigned int critical = 0;
@@ -405,10 +399,18 @@ static UA_StatusCode csr_gnutls(UA_GDSCertificateGroup *scg,
     }
 
     gnuErr = gnutls_x509_crt_sign2(cert, cc->ca_crt, cc->ca_key, GNUTLS_DIG_SHA256, 0);
+    UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
 
-    //TODO EXPORT CERTIFICATE
+    //Export certificate
+    memset(buffer, 0, sizeof(buffer));
+    buffer_size = sizeof(buffer);
+    gnutls_x509_crt_export(cert, GNUTLS_X509_FMT_DER, buffer, &buffer_size);
+    UA_ByteString_allocBuffer(certificate, buffer_size + 1);
+    memcpy(certificate->data, buffer, buffer_size);
+    certificate->data[buffer_size] = '\0';
+    certificate->length--;
 
-    save_x509(cert, "/home/kocybi/app.der");
+  //  save_x509(cert, "/home/markus/app.der");
 deinit_csr:
     gnutls_x509_crq_deinit(crq);
     gnutls_x509_crt_deinit(cert);
@@ -420,7 +422,7 @@ deinit_csr:
 //TODO implement pfx support for private key, right now only pem is supported (part12/p.34)
 //example for pfx generation: https://www.gnutls.org/manual/gnutls.html#PKCS12-structure-generation-example
 //TODO DomainNames can be from different types (DNS, IPADDRESS, ....)
-
+//TODO Implement DomainNames
 static UA_StatusCode createNewKeyPair_gnutls (UA_GDSCertificateGroup *scg,
                                    UA_String subjectName,
                                    UA_String *privateKeyFormat,
@@ -461,7 +463,7 @@ static UA_StatusCode createNewKeyPair_gnutls (UA_GDSCertificateGroup *scg,
     if(ret != UA_STATUSCODE_GOOD)
         goto deinit_create;
 
-    UA_ByteString_allocBuffer(password, buf_size + 1);
+    UA_ByteString_allocBuffer(password, buf_size + 1 );
     memcpy(password->data, buffer, buf_size);
     password->data[buf_size] = '\0';
     password->length--;
@@ -523,10 +525,16 @@ static UA_StatusCode createNewKeyPair_gnutls (UA_GDSCertificateGroup *scg,
     if(ret != UA_STATUSCODE_GOOD)
         goto deinit_create;
 
+    //Export certificate
+    memset(buffer, 0, sizeof(buffer));
+    buf_size = sizeof(buffer);
+    gnutls_x509_crt_export(cert, GNUTLS_X509_FMT_DER, buffer, &buf_size);
+    UA_ByteString_allocBuffer(certificate, buf_size + 1);
+    memcpy(certificate->data, buffer, buf_size);
+    certificate->data[buf_size] = '\0';
+    certificate->length--;
 
-    save_x509(cert, "/home/kocybi/app2.der");
-
-    //TODO EXPORT CERTIFICATE
+ //   save_x509(cert, "/home/markus/app2.der");
 
 deinit_create:
     gnutls_x509_crt_deinit(cert);
@@ -547,7 +555,7 @@ UA_StatusCode UA_InitCA(UA_GDSCertificateGroup *scg,
     scg->createNewKeyPair = createNewKeyPair_gnutls;
     scg->deleteMembers = deleteMembers_gnutls;
 
-    return create_caContext(scg, caName, caDays, sn,caBitKeySize, logger);
+    return create_caContext(scg, caName, caDays, sn, caBitKeySize, logger);
 }
 
 
