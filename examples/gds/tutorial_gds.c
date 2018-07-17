@@ -48,13 +48,22 @@ int main(int argc, char* argv[]) {
     UA_ByteString csr;
     memset(&csr, 0, sizeof(UA_ByteString));
      UA_GDSCertificateGroup scg;
-    UA_String name = UA_STRING("O=open62541,CN=GDS@localhost");
-    UA_InitCA(&scg, name, (60 * 60 * 24 * 365 * 10), 6000, config->logger);
-    UA_createCSR(&scg, &csr);
-    scg.certificateSigningRequest(&scg, &csr, NULL);
-    scg.deleteMembers(&scg);
-    UA_ByteString_deleteMembers(&csr);
 
+    UA_String name = UA_STRING("O=open62541,CN=GDS@localhost");
+    UA_String name2 = UA_STRING("C=DE,O=open62541,CN=open62541@localhost");
+    UA_String name3 = UA_STRING("urn:unconfigured:application");
+    UA_InitCA(&scg, name, (60 * 60 * 24 * 365 * 10), 6000, 2048, config->logger);
+    UA_createCSR(&scg, &csr);
+    scg.certificateSigningRequest(&scg, &csr, 2048, NULL);
+
+
+    UA_ByteString passw;
+    memset(&passw, 0, sizeof(UA_ByteString));
+    scg.createNewKeyPair(&scg, name2, NULL, NULL, 2048, NULL, 0, name3, NULL, &passw);
+
+    scg.deleteMembers(&scg);
+    UA_ByteString_deleteMembers(&passw);
+    UA_ByteString_deleteMembers(&csr);
     printf("%p", (void *) &name);
     printf("%p", (void *) &scg);
     UA_ByteString_deleteMembers(&certificate);

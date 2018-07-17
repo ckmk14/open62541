@@ -28,13 +28,18 @@ struct UA_GDSCertificateGroup {
     UA_Logger logger;
     UA_StatusCode (*certificateSigningRequest)(UA_GDSCertificateGroup *cg,
                                                const UA_ByteString *csr,
+                                               unsigned int supposedKeySize,
                                                UA_ByteString *const certificate);
-    UA_StatusCode (*createNewKeyPair) (void *context,
+    UA_StatusCode (*createNewKeyPair) (UA_GDSCertificateGroup *scg,
                                        UA_String subjectName,
                                        UA_String *privateKeyFormat,
                                        UA_String *privateKeyPassword,
-                                       const UA_String *domainNames,
-                                       size_t domainNamesSize);
+                                       unsigned  int keySize,
+                                       UA_ByteString *domainNamesArray,
+                                       size_t domainNamesSize,
+                                       UA_String applicationUri,
+                                       UA_ByteString *const certificate,
+                                       UA_ByteString *const password);
 
     UA_Boolean  (*isCertificatefromCA) (void *context, UA_ByteString certificate);
 
