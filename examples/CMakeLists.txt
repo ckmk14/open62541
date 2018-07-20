@@ -148,4 +148,23 @@ endif()
 
 if (UA_ENABLE_GDS)
     add_example(tutorial_gds gds/tutorial_gds.c)
+
+    set(UA_TYPES_OUT "ua_types_gds")
+    add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/${UA_TYPES_OUT}_generated.c
+            ${PROJECT_BINARY_DIR}/src_generated/${UA_TYPES_OUT}_generated.h
+            ${PROJECT_BINARY_DIR}/src_generated/${UA_TYPES_OUT}_generated_handling.h
+            ${PROJECT_BINARY_DIR}/src_generated/${UA_TYPES_OUT}_generated_encoding_binary.h
+            PRE_BUILD
+            COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_datatypes.py
+            --namespace=2
+            --type-csv=${PROJECT_SOURCE_DIR}/deps/ua-nodeset/GDS/OpcUaGdsModel.csv
+            --type-bsd=${PROJECT_SOURCE_DIR}/deps/ua-nodeset/GDS/Opc.Ua.Gds.Types.bsd
+            --no-builtin
+            ${PROJECT_BINARY_DIR}/src_generated/${UA_TYPES_OUT}
+            DEPENDS ${PROJECT_SOURCE_DIR}/tools/generate_datatypes.py
+            ${PROJECT_SOURCE_DIR}/deps/ua-nodeset/GDS/OpcUaGdsModel.csv
+            ${PROJECT_SOURCE_DIR}/deps/ua-nodeset/GDS/Opc.Ua.Gds.Types.bsd)
+    add_custom_target(open62541-generator-types-gds DEPENDS ${PROJECT_BINARY_DIR}/src_generated/${UA_TYPES_OUT}_generated.c)
+
+    add_example(test_dataType gds/test_dataType.c ${PROJECT_BINARY_DIR}/src_generated/ua_types_gds__generated.c)
 endif()

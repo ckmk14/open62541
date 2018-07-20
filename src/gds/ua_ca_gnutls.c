@@ -65,16 +65,16 @@ static UA_StatusCode generate_private_key(UA_GDSCertificateGroup *scg,
 }
 
 
-static void save_x509(gnutls_x509_crt_t crt, const char *loc) {
-    gnutls_datum_t crtdata = {0};
-    gnutls_x509_crt_export(crt, GNUTLS_X509_FMT_DER, NULL, (size_t*)&crtdata.size);
-    crtdata.data = (unsigned char *) malloc(crtdata.size);
-    gnutls_x509_crt_export(crt, GNUTLS_X509_FMT_DER, crtdata.data, (size_t*)&crtdata.size);
-    FILE *f = fopen(loc, "w");
-    fwrite(crtdata.data, crtdata.size, 1, f);
-    fclose(f);
-    free(crtdata.data);
-}
+//static void save_x509(gnutls_x509_crt_t crt, const char *loc) {
+//    gnutls_datum_t crtdata = {0};
+//    gnutls_x509_crt_export(crt, GNUTLS_X509_FMT_DER, NULL, (size_t*)&crtdata.size);
+//    crtdata.data = (unsigned char *) malloc(crtdata.size);
+//    gnutls_x509_crt_export(crt, GNUTLS_X509_FMT_DER, crtdata.data, (size_t*)&crtdata.size);
+//    FILE *f = fopen(loc, "w");
+//    fwrite(crtdata.data, crtdata.size, 1, f);
+//    fclose(f);
+//    free(crtdata.data);
+//}
 
 static UA_StatusCode create_caContext(UA_GDSCertificateGroup *scg,
                                       UA_String caName,
@@ -172,7 +172,7 @@ static UA_StatusCode create_caContext(UA_GDSCertificateGroup *scg,
     if(gnuErr != UA_STATUSCODE_GOOD)
         goto error;
 
-      save_x509(cc->ca_crt, "/home/markus/ca.der");
+   //   save_x509(cc->ca_crt, "/home/kocybi/ca.der");
 //
 //    unsigned char buffer[10 * 1024];
 //    size_t buffer_size = sizeof(buffer);
@@ -245,7 +245,7 @@ void UA_createCSR(UA_GDSCertificateGroup *scg, UA_ByteString *csr) {
     size_t buf_size = sizeof(buf);
     gnutls_x509_privkey_export(key, GNUTLS_X509_FMT_DER, buf, &buf_size);
 
-    FILE *f = fopen("/home/markus/app_priv.der", "w");
+    FILE *f = fopen("/home/kocybi/app_priv.der", "w");
     fwrite(buf, buf_size, 1, f);
     fclose(f);
 

@@ -14,12 +14,12 @@ static void stopHandler(int sig) {
     UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "received ctrl-c");
     running = false;
 }
-
-static void save_x509(UA_ByteString crt, const char *loc) {
-    FILE *f = fopen(loc, "w");
-    fwrite(crt.data, crt.length, 1, f);
-    fclose(f);
-}
+//
+//static void save_x509(UA_ByteString crt, const char *loc) {
+//    FILE *f = fopen(loc, "w");
+//    fwrite(crt.data, crt.length, 1, f);
+//    fclose(f);
+//}
 
 int main(int argc, char* argv[]) {
     signal(SIGINT, stopHandler);
@@ -72,8 +72,8 @@ int main(int argc, char* argv[]) {
     memset(&passw, 0, sizeof(UA_ByteString));
     scg.createNewKeyPair(&scg, name2, NULL, NULL, 2048, NULL, 0, name3, &cert2, &passw);
 
-    save_x509(cert1, "/home/markus/app.der");
-    save_x509(cert2, "/home/markus/app2.der");
+  //  save_x509(cert1, "/home/kocybi/app.der");
+  //  save_x509(cert2, "/home/kocybi/app2.der");
 
     scg.deleteMembers(&scg);
     UA_ByteString_deleteMembers(&cert1);
