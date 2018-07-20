@@ -626,6 +626,11 @@ else()
     endif()
 endif()
 
+# Required also for the full namespace
+if(UA_ENABLE_GDS)
+    list(APPEND UA_FILE_TYPES_BSD ${PROJECT_SOURCE_DIR}/deps/ua-nodeset/GDS/Opc.Ua.Gds.Types.bsd)
+endif()
+
 if(NOT EXISTS "${UA_FILE_NS0}")
     message(FATAL_ERROR "File ${UA_FILE_NS0} not found. You probably need to initialize the git submodule for deps/ua-nodeset.")
 endif()
@@ -633,6 +638,11 @@ endif()
 set(SELECTED_TYPES_TMP "")
 foreach(f ${UA_FILE_DATATYPES})
     set(SELECTED_TYPES_TMP ${SELECTED_TYPES_TMP} "--selected-types=${f}")
+endforeach()
+
+set(UA_FILE_TYPES_BSD_TMP "")
+foreach(f ${UA_FILE_TYPES_BSD})
+    set(UA_FILE_TYPES_BSD_TMP ${UA_FILE_TYPES_BSD_TMP} "--type-bsd=${f}")
 endforeach()
 
 # standard-defined data types
@@ -644,7 +654,7 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated
                    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_datatypes.py
                            --type-csv=${UA_FILE_NODEIDS}
                            ${SELECTED_TYPES_TMP}
-                           --type-bsd=${UA_FILE_TYPES_BSD}
+                           ${UA_FILE_TYPES_BSD_TMP}
                            ${PROJECT_BINARY_DIR}/src_generated/ua_types
                    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_datatypes.py
                            ${UA_FILE_NODEIDS}
@@ -666,7 +676,7 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/ua_transport_gener
                    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_datatypes.py
                            --namespace=1
                            --selected-types=${PROJECT_SOURCE_DIR}/tools/schema/datatypes_transport.txt
-                           --type-bsd=${UA_FILE_TYPES_BSD}
+                           ${UA_FILE_TYPES_BSD_TMP}
                            --type-bsd=${PROJECT_SOURCE_DIR}/tools/schema/Custom.Opc.Ua.Transport.bsd
                            --no-builtin
                            ${PROJECT_BINARY_DIR}/src_generated/ua_transport
