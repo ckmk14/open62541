@@ -145,3 +145,9 @@ if(UA_ENABLE_PUBSUB)
         add_example(tutorial_pubsub_subscribe pubsub/tutorial_pubsub_subscribe.c)
     endif()
 endif()
+
+
+if(UA_ENABLE_GDS)
+    add_example(tutorial_gds gds/tutorial_gds.c)
+    add_example(a_test_datatype gds/test_dataType.c)
+endif()
