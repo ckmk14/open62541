@@ -4,10 +4,52 @@
  *    Copyright 2018 (c) Markus Karch, Fraunhofer IOSB
  */
 
+#include <src_generated/ua_types_generated.h>
+#include <ua_types.h>
 #include "ua_gds_ns.h"
 
 #ifdef  UA_ENABLE_GDS
 
+UA_ApplicationRecordDataType test;
+
+static UA_StatusCode
+registerApplicationMethodCallback(UA_Server *server,
+                      const UA_NodeId *sessionId, void *sessionHandle,
+                      const UA_NodeId *methodId, void *methodContext,
+                      const UA_NodeId *objectId, void *objectContext,
+                      size_t inputSize, const UA_Variant *input,
+                      size_t outputSize, UA_Variant *output) {
+    printf("\nIn Method registerApplication\n");
+
+    UA_ApplicationRecordDataType *record = (UA_ApplicationRecordDataType *)input->data;
+    UA_ApplicationRecordDataType_init(&test);
+    UA_ApplicationRecordDataType_copy(&test, record);
+    test.applicationId = UA_NODEID_GUID(2, UA_Guid_random());
+    UA_Variant_setScalarCopy(output, &test.applicationId, &UA_TYPES[UA_TYPES_NODEID]);
+
+    return UA_STATUSCODE_GOOD;
+}
+
+
+static UA_StatusCode
+findApplicationMethodCallback(UA_Server *server,
+                      const UA_NodeId *sessionId, void *sessionHandle,
+                      const UA_NodeId *methodId, void *methodContext,
+                      const UA_NodeId *objectId, void *objectContext,
+                      size_t inputSize, const UA_Variant *input,
+                      size_t outputSize, UA_Variant *output) {
+    printf("\nIn Method findApplication\n");
+
+    if (!UA_NodeId_isNull(&test.applicationId)){
+        printf("\nIn Method findApplication in if\n");
+
+        UA_Variant_setArrayCopy(output, &test, 1, &UA_TYPES[UA_TYPES_APPLICATIONRECORDDATATYPE]);
+    }
+ //
+    // UA_ApplicationRecordDataType *record = (UA_ApplicationRecordDataType *)input->data;
+
+    return UA_STATUSCODE_GOOD;
+}
 static UA_StatusCode
 generalMethodCallback(UA_Server *server,
                          const UA_NodeId *sessionId, void *sessionHandle,
@@ -15,40 +57,39 @@ generalMethodCallback(UA_Server *server,
                          const UA_NodeId *objectId, void *objectContext,
                          size_t inputSize, const UA_Variant *input,
                          size_t outputSize, UA_Variant *output) {
-
     printf("\nIn Method\n");
     return UA_STATUSCODE_GOOD;
 }
 
 static void
-addFindApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directoryTypeId) {
+addFindApplicationsMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directoryTypeId) {
     UA_Argument inputArgument;
     UA_Argument_init(&inputArgument);
-    inputArgument.description = UA_LOCALIZEDTEXT("en-US", "ApplicationRecordDataType");
+    inputArgument.description = UA_LOCALIZEDTEXT("en-US", "String");
     inputArgument.name = UA_STRING("InputArguments");
     inputArgument.dataType = UA_TYPES[UA_TYPES_STRING].typeId;
     inputArgument.valueRank = -1; /* scalar */
 
     UA_Argument outputArgument;
     UA_Argument_init(&outputArgument);
-    outputArgument.description = UA_LOCALIZEDTEXT("en-US", "A String");
+    outputArgument.description = UA_LOCALIZEDTEXT("en-US", "ApplicationRecordDataType");
     outputArgument.name = UA_STRING("MyOutput");
-    outputArgument.dataType = UA_TYPES[UA_TYPES_STRING].typeId; //hier muss applicationRecordDataType
-    outputArgument.valueRank = -1; /* scalar */
+    outputArgument.dataType = UA_TYPES[UA_TYPES_APPLICATIONRECORDDATATYPE].typeId;
+    outputArgument.valueRank = 1;
 
     UA_NodeId methodNodeId;
     UA_MethodAttributes mAttr = UA_MethodAttributes_default;
-    mAttr.displayName = UA_LOCALIZEDTEXT("en-US","FindApplication");
+    mAttr.displayName = UA_LOCALIZEDTEXT("en-US","FindApplications");
     mAttr.executable = true;
     mAttr.userExecutable = true;
-    UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(ns_index, 15),
+    UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(ns_index, 143),
                             directoryTypeId,
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "FindApplications"),
-                            mAttr, &generalMethodCallback,
+                            mAttr, &findApplicationMethodCallback,
                             1, &inputArgument, 1, &outputArgument, NULL, &methodNodeId);
 
-    UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 15),
+    UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 143),
                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
                            UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
 }
@@ -78,7 +119,7 @@ addRegisterApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId di
                             directoryTypeId,
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "RegisterApplication"),
-                            mAttr, &generalMethodCallback,
+                            mAttr, &registerApplicationMethodCallback,
                             1, &inputArgument, 1, &outputArgument, NULL, &methodNodeId);
 
     UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 146),
@@ -101,14 +142,14 @@ addUpdateApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId dire
     mAttr.displayName = UA_LOCALIZEDTEXT("en-US","UpdateApplication");
     mAttr.executable = true;
     mAttr.userExecutable = true;
-    UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(ns_index, 188),
+    UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(ns_index, 200),
                             directoryTypeId,
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "UpdateApplication"),
                             mAttr, &generalMethodCallback,
                             1, &inputArgument, 0, NULL, NULL, &methodNodeId);
 
-    UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 188),
+    UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 200),
                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
                            UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
 }
@@ -127,14 +168,14 @@ addUnregisterApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId 
     mAttr.displayName = UA_LOCALIZEDTEXT("en-US","UnregisterApplication");
     mAttr.executable = true;
     mAttr.userExecutable = true;
-    UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(ns_index, 21),
+    UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(ns_index, 149),
                             directoryTypeId,
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "UnregisterApplication"),
                             mAttr, &generalMethodCallback,
                             1, &inputArgument, 0, NULL, NULL, &methodNodeId);
 
-    UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 21),
+    UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 149),
                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
                            UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
 }
@@ -171,7 +212,6 @@ addGetApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directo
                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
                            UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
 }
-
 
 static void
 addQueryApplicationsMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directoryTypeId) {
@@ -356,7 +396,7 @@ static void addDirectoryType(UA_Server *server, UA_UInt16 ns_index){
                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
                            UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
 
-    addFindApplicationMethod(server, ns_index, directoryTypeId);
+    addFindApplicationsMethod(server, ns_index, directoryTypeId);
 
     addRegisterApplicationMethod(server, ns_index, directoryTypeId);
 
@@ -425,6 +465,7 @@ UA_StatusCode addNamespaceGDS(UA_Server *server) {
                             UA_NODEID_NUMERIC(0, UA_NS0ID_CERTIFICATEGROUPFOLDERTYPE),
                             oAttr, NULL, NULL);
 
+    UA_ApplicationRecordDataType_init(&test);
 
     return UA_STATUSCODE_GOOD;
 }
