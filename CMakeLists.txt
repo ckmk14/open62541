@@ -863,14 +863,18 @@ GET_PROPERTY(ua_architecture_add_definitions GLOBAL PROPERTY UA_ARCHITECTURE_ADD
 add_definitions(${ua_architecture_add_definitions})
 
 GET_PROPERTY(ua_architecture_remove_definitions GLOBAL PROPERTY UA_ARCHITECTURE_REMOVE_DEFINITIONS)
-remove_definitions(${ua_architecture_remove_definitions})
+if (NOT "${ua_architecture_remove_definitions}" STREQUAL "")
+  string(REPLACE " " ";" ua_architecture_remove_definitions_list ${ua_architecture_remove_definitions})
+  remove_definitions(${ua_architecture_remove_definitions_list})
+endif(NOT "${ua_architecture_remove_definitions}" STREQUAL "")
 
 GET_PROPERTY(ua_architecture_append_to_library GLOBAL PROPERTY UA_ARCHITECTURE_APPEND_TO_LIBRARY)
 list(APPEND open62541_LIBRARIES ${ua_architecture_append_to_library})
 
+target_compile_definitions(open62541 PUBLIC UA_ARCHITECTURE_${UA_ARCHITECTURE_UPPER})
+
 # DLL requires linking to dependencies
 target_link_libraries(open62541 ${open62541_LIBRARIES})
-
 
 ##########################
 # Build Selected Targets #
@@ -942,7 +946,7 @@ add_custom_target(cpplint cpplint
 # specify install location with `-DCMAKE_INSTALL_PREFIX=xyz`
 # Enable shared library with `-DBUILD_SHARED_LIBS=ON`
 
-set(cmake_configfile_install ${LIB_INSTALL_DIR}/cmake)
+set(cmake_configfile_install ${LIB_INSTALL_DIR}/cmake/open62541)
 set(target_install_dest_name "${cmake_configfile_install}/open62541Targets.cmake")
 set(open62541_tools_dir share/open62541/tools)
 set(open62541_deps_dir include/open62541/deps)

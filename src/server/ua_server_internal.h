@@ -92,6 +92,18 @@ typedef struct serverOnNetwork_hash_entry {
     struct serverOnNetwork_hash_entry* next;
 } serverOnNetwork_hash_entry;
 
+typedef struct mdnsHostnameToIp_list_entry {
+    LIST_ENTRY(mdnsHostnameToIp_list_entry) pointers;
+    UA_String mdnsHostname;
+    struct in_addr addr;
+} mdnsHostnameToIp_list_entry;
+
+#define MDNS_HOSTNAME_TO_IP_HASH_PRIME 1009
+typedef struct mdnsHostnameToIp_hash_entry {
+    mdnsHostnameToIp_list_entry* entry;
+    struct mdnsHostnameToIp_hash_entry* next;
+} mdnsHostnameToIp_hash_entry;
+
 #endif /* UA_ENABLE_DISCOVERY_MULTICAST */
 #endif /* UA_ENABLE_DISCOVERY */
 
@@ -128,6 +140,11 @@ struct UA_Server {
 
     UA_Server_serverOnNetworkCallback serverOnNetworkCallback;
     void* serverOnNetworkCallbackData;
+
+
+    LIST_HEAD(mdnsHostnameToIp_list, mdnsHostnameToIp_list_entry) mdnsHostnameToIp; // doubly-linked list of hostname to IP mapping (from mDNS)
+    // hash mapping hostname to ip
+    struct mdnsHostnameToIp_hash_entry* mdnsHostnameToIpHash[MDNS_HOSTNAME_TO_IP_HASH_PRIME];
 
 # endif
 #endif
@@ -250,12 +267,25 @@ isNodeInTree(UA_Nodestore *ns, const UA_NodeId *leafNode,
              size_t referenceTypeIdsSize);
 
 /* Returns an array with the hierarchy of type nodes. The returned array starts
- * at the leaf and continues "upwards" in the hierarchy based on the
+ * at the leaf and continues "upwards" or "downwards" in the hierarchy based on the
  * ``hasSubType`` references. Since multiple-inheritance is possible in general,
- * duplicate entries are removed. */
+ * duplicate entries are removed.
+ * The parameter `walkDownwards` indicates the direction of search.
+ * If set to TRUE it will get all the subtypes of the given
+ * leafType (including leafType).
+ * If set to FALSE it will get all the parent types of the given
+ * leafType (including leafType)*/
 UA_StatusCode
 getTypeHierarchy(UA_Nodestore *ns, const UA_NodeId *leafType,
-                 UA_NodeId **typeHierarchy, size_t *typeHierarchySize);
+                 UA_NodeId **typeHierarchy, size_t *typeHierarchySize,
+                 UA_Boolean walkDownwards);
+
+/* Same as getTypeHierarchy but takes multiple leafTypes as parameter and returns
+ * an combined list of all the found types for all the leaf types */
+UA_StatusCode
+getTypesHierarchy(UA_Nodestore *ns, const UA_NodeId *leafType, size_t leafTypeSize,
+                 UA_NodeId **typeHierarchy, size_t *typeHierarchySize,
+                 UA_Boolean walkDownwards);
 
 /* Returns the type node from the node on the stack top. The type node is pushed
  * on the stack and returned. */

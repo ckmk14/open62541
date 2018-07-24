@@ -320,20 +320,19 @@ ServerNetworkLayerTCP_start(UA_ServerNetworkLayer *nl, const UA_String *customHo
 
     /* Get the discovery url from the hostname */
     UA_String du = UA_STRING_NULL;
+    char discoveryUrlBuffer[256];
+    char hostnameBuffer[256];
     if (customHostname->length) {
-        char discoveryUrl[256];
-        du.length = (size_t)UA_snprintf(discoveryUrl, 255, "opc.tcp://%.*s:%d/",
+        du.length = (size_t)UA_snprintf(discoveryUrlBuffer, 255, "opc.tcp://%.*s:%d/",
                                      (int)customHostname->length,
                                      customHostname->data,
                                      layer->port);
-        du.data = (UA_Byte*)discoveryUrl;
+        du.data = (UA_Byte*)discoveryUrlBuffer;
     }else{
-        char hostname[256];
-        if(UA_gethostname(hostname, 255) == 0) {
-            char discoveryUrl[256];
-            du.length = (size_t)UA_snprintf(discoveryUrl, 255, "opc.tcp://%s:%d/",
-                                         hostname, layer->port);
-            du.data = (UA_Byte*)discoveryUrl;
+        if(UA_gethostname(hostnameBuffer, 255) == 0) {
+            du.length = (size_t)UA_snprintf(discoveryUrlBuffer, 255, "opc.tcp://%s:%d/",
+                                         hostnameBuffer, layer->port);
+            du.data = (UA_Byte*)discoveryUrlBuffer;
         } else {
             UA_LOG_ERROR(layer->logger, UA_LOGCATEGORY_NETWORK, "Could not get the hostname");
         }
@@ -652,10 +651,10 @@ UA_StatusCode UA_ClientConnectionTCP_poll(UA_Client *client, void *data) {
 
             _os_sleep(&time,&sig);
             error = connect(clientsockfd, tcpConnection->server->ai_addr,
-                        WIN32_INT tcpConnection->server->ai_addrlen);
-            if ((error == -1 && errno__ == EISCONN) || (error == 0))
+                        tcpConnection->server->ai_addrlen);
+            if ((error == -1 && errno == EISCONN) || (error == 0))
                 resultsize = 1;
-            if (error == -1 && errno__ != EALREADY && errno__ != EINPROGRESS)
+            if (error == -1 && errno != EALREADY && errno != EINPROGRESS)
                 break;
         }
         while(resultsize == 0);
@@ -912,10 +911,10 @@ UA_ClientConnectionTCP(UA_ConnectionConfig conf,
                     break;
 
                 _os_sleep(&time,&sig);
-                error = connect(clientsockfd, server->ai_addr, WIN32_INT server->ai_addrlen);
-                if ((error == -1 && errno__ == EISCONN) || (error == 0))
+                error = connect(clientsockfd, server->ai_addr, server->ai_addrlen);
+                if ((error == -1 && errno == EISCONN) || (error == 0))
                     resultsize = 1;
-                if (error == -1 && errno__ != EALREADY && errno__ != EINPROGRESS)
+                if (error == -1 && errno != EALREADY && errno != EINPROGRESS)
                     break;
             }
             while(resultsize == 0);
