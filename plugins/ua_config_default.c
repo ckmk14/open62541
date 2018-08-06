@@ -618,6 +618,9 @@ UA_ServerConfig_delete(UA_ServerConfig *config) {
     config->serverCapabilitiesSize = 0;
 #endif
 
+#ifdef UA_ENABLE_GDS
+    config->gds_rm.deleteMembers(&config->gds_rm);
+#endif
     /* Nodestore */
     if(config->nodestore.deleteNodestore)
         config->nodestore.deleteNodestore(config->nodestore.context);
