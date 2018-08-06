@@ -415,6 +415,7 @@ endif()
 
 set(exported_headers ${exported_headers}
                      ${ua_architecture_headers_beginning}
+                     ${PROJECT_SOURCE_DIR}/deps/queue.h
                      ${PROJECT_BINARY_DIR}/src_generated/ua_config.h
                      ${PROJECT_SOURCE_DIR}/deps/ms_stdint.h
                      ${PROJECT_BINARY_DIR}/src_generated/ua_statuscodes.h
@@ -432,7 +433,8 @@ set(exported_headers ${exported_headers}
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_securitypolicy.h
                      ${PROJECT_SOURCE_DIR}/include/ua_server_pubsub.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_pubsub.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_ca.h
+                     ${PROJECT_SOURCE_DIR}/include/gds/ua_plugin_ca.h
+                     ${PROJECT_SOURCE_DIR}/include/gds/ua_plugin_registration_manager.h
                      ${PROJECT_SOURCE_DIR}/src/gds/ua_gds_ns.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_nodestore.h
                      ${PROJECT_SOURCE_DIR}/include/ua_server_config.h
@@ -442,8 +444,7 @@ set(exported_headers ${exported_headers}
                      ${PROJECT_SOURCE_DIR}/include/ua_client_subscriptions.h
                      ${PROJECT_SOURCE_DIR}/include/ua_client_highlevel_async.h)
 
-set(internal_headers ${PROJECT_SOURCE_DIR}/deps/queue.h
-                     ${PROJECT_SOURCE_DIR}/deps/pcg_basic.h
+set(internal_headers ${PROJECT_SOURCE_DIR}/deps/pcg_basic.h
                      ${PROJECT_SOURCE_DIR}/deps/libc_time.h
                      ${PROJECT_SOURCE_DIR}/deps/base64.h
                      ${PROJECT_SOURCE_DIR}/src/ua_util_internal.h
@@ -551,10 +552,11 @@ endif()
 
 
 if(UA_ENABLE_GDS)
-    #This should go into the internal_headers (test purposes)
     list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/src/gds/ua_ca_gnutls.h)
-    #This should go into the lib_sources (test purposes)
+    list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.h)
+
     list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/src/gds/ua_ca_gnutls.c)
+    list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.c)
 endif()
 
 
@@ -631,6 +633,7 @@ endif()
 # Required also for the full namespace
 if(UA_ENABLE_GDS)
     list(APPEND UA_FILE_TYPES_BSD ${PROJECT_SOURCE_DIR}/deps/ua-nodeset/GDS/Opc.Ua.Gds.Types.bsd)
+    list(APPEND UA_FILE_NODEIDS ${PROJECT_SOURCE_DIR}/deps/ua-nodeset/GDS/OpcUaGdsModel.csv)
 endif()
 
 if(NOT EXISTS "${UA_FILE_NS0}")
@@ -647,6 +650,12 @@ foreach(f ${UA_FILE_TYPES_BSD})
     set(UA_FILE_TYPES_BSD_TMP ${UA_FILE_TYPES_BSD_TMP} "--type-bsd=${f}")
 endforeach()
 
+set(UA_FILE_NODEIDS_TMP "")
+foreach(f ${UA_FILE_NODEIDS})
+    set(UA_FILE_NODEIDS_TMP ${UA_FILE_NODEIDS_TMP} "--type-csv=${f}")
+endforeach()
+
+
 # standard-defined data types
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated.c
                           ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated.h
@@ -654,7 +663,7 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated
                           ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated_encoding_binary.h
                    PRE_BUILD
                    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_datatypes.py
-                           --type-csv=${UA_FILE_NODEIDS}
+                           ${UA_FILE_NODEIDS_TMP}
                            ${SELECTED_TYPES_TMP}
                            ${UA_FILE_TYPES_BSD_TMP}
                            ${PROJECT_BINARY_DIR}/src_generated/ua_types
@@ -703,13 +712,20 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/ua_statuscodes.h
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_statuscode_descriptions.py
                 ${UA_FILE_STATUSCODES})
 
+# Temporarily generate_nodeid_header.py can only parse one file
+if(UA_NAMESPACE_ZERO STREQUAL "FULL")
+    set(UA_FILE_NODEIDS_HEADER ${PROJECT_SOURCE_DIR}/deps/ua-nodeset/Schema/NodeIds.csv)
+else()
+    set(UA_FILE_NODEIDS_HEADER ${PROJECT_SOURCE_DIR}/tools/schema/NodeIds.csv)
+endif()
+
 # Header containing defines for all NodeIds
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/ua_nodeids.h
         PRE_BUILD
         COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_nodeid_header.py
-        ${UA_FILE_NODEIDS}  ${PROJECT_BINARY_DIR}/src_generated/ua_nodeids NS0
+        ${UA_FILE_NODEIDS_HEADER}  ${PROJECT_BINARY_DIR}/src_generated/ua_nodeids NS0
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_nodeid_header.py
-        ${UA_FILE_NODEIDS})
+        ${UA_FILE_NODEIDS_HEADER})
 
 # we need a custom target to avoid that the generator is called concurrently and
 # thus overwriting files while the other thread is compiling

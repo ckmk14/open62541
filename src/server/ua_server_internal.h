@@ -59,6 +59,7 @@ typedef struct UA_DispatchQueue UA_DispatchQueue;
 
 #endif /* UA_ENABLE_MULTITHREADING */
 
+
 #ifdef UA_ENABLE_DISCOVERY
 
 typedef struct registeredServer_list_entry {

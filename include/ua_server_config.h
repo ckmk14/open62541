@@ -27,6 +27,10 @@ extern "C" {
 #include "ua_plugin_pubsub.h"
 #endif
 
+#ifdef UA_ENABLE_GDS
+    #include "gds/ua_plugin_registration_manager.h"
+#endif
+
 /**
  * .. _server-configuration:
  *
@@ -69,7 +73,7 @@ struct UA_ServerConfig {
     UA_ByteString serverCertificate;
 
     /* MDNS Discovery */
-#ifdef UA_ENABLE_DISCOVERY
+#if defined(UA_ENABLE_DISCOVERY) || defined(UA_ENABLE_GDS)
     UA_String mdnsServerName;
     size_t serverCapabilitiesSize;
     UA_String *serverCapabilities;
@@ -97,6 +101,9 @@ struct UA_ServerConfig {
     UA_PubSubTransportLayer *pubsubTransportLayers;
 #endif
 
+#ifdef UA_ENABLE_GDS
+    UA_GDSRegistrationManager gds_rm;
+#endif
     /* Available endpoints */
     size_t endpointsSize;
     UA_Endpoint *endpoints;

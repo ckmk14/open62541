@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#include "ua_plugin_ca.h"
+#include "gds/ua_plugin_ca.h"
 #include "ua_plugin_log.h"
 
 #ifdef UA_ENABLE_GDS

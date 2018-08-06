@@ -10,8 +10,6 @@
 
 #ifdef  UA_ENABLE_GDS
 
-UA_ApplicationRecordDataType test;
-
 static UA_StatusCode
 registerApplicationMethodCallback(UA_Server *server,
                       const UA_NodeId *sessionId, void *sessionHandle,
@@ -20,12 +18,14 @@ registerApplicationMethodCallback(UA_Server *server,
                       size_t inputSize, const UA_Variant *input,
                       size_t outputSize, UA_Variant *output) {
     printf("\nIn Method registerApplication\n");
-
     UA_ApplicationRecordDataType *record = (UA_ApplicationRecordDataType *)input->data;
-    UA_ApplicationRecordDataType_init(&test);
-    UA_ApplicationRecordDataType_copy(&test, record);
-    test.applicationId = UA_NODEID_GUID(2, UA_Guid_random());
-    UA_Variant_setScalarCopy(output, &test.applicationId, &UA_TYPES[UA_TYPES_NODEID]);
+
+    UA_NodeId applicationId;
+
+    UA_GDSRegistrationManager rm = server->config.gds_rm;
+    rm.registerApplication(&rm, record, &applicationId);
+
+    UA_Variant_setScalarCopy(output, &applicationId, &UA_TYPES[UA_TYPES_NODEID]);
 
     return UA_STATUSCODE_GOOD;
 }
@@ -40,11 +40,11 @@ findApplicationMethodCallback(UA_Server *server,
                       size_t outputSize, UA_Variant *output) {
     printf("\nIn Method findApplication\n");
 
-    if (!UA_NodeId_isNull(&test.applicationId)){
-        printf("\nIn Method findApplication in if\n");
+    //if (!UA_NodeId_isNull(&test.applicationId)){
+    //    printf("\nIn Method findApplication in if\n");
 
-        UA_Variant_setArrayCopy(output, &test, 1, &UA_TYPES[UA_TYPES_APPLICATIONRECORDDATATYPE]);
-    }
+    //    UA_Variant_setArrayCopy(output, &test, 1, &UA_TYPES[UA_TYPES_APPLICATIONRECORDDATATYPE]);
+   // }
  //
     // UA_ApplicationRecordDataType *record = (UA_ApplicationRecordDataType *)input->data;
 
@@ -77,7 +77,6 @@ addFindApplicationsMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId direc
     outputArgument.dataType = UA_TYPES[UA_TYPES_APPLICATIONRECORDDATATYPE].typeId;
     outputArgument.valueRank = 1;
 
-    UA_NodeId methodNodeId;
     UA_MethodAttributes mAttr = UA_MethodAttributes_default;
     mAttr.displayName = UA_LOCALIZEDTEXT("en-US","FindApplications");
     mAttr.executable = true;
@@ -87,7 +86,7 @@ addFindApplicationsMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId direc
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "FindApplications"),
                             mAttr, &findApplicationMethodCallback,
-                            1, &inputArgument, 1, &outputArgument, NULL, &methodNodeId);
+                            1, &inputArgument, 1, &outputArgument, NULL, NULL);
 
     UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 143),
                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
@@ -110,7 +109,6 @@ addRegisterApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId di
     outputArgument.dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
     outputArgument.valueRank = -1; /* scalar */
 
-    UA_NodeId methodNodeId;
     UA_MethodAttributes mAttr = UA_MethodAttributes_default;
     mAttr.displayName = UA_LOCALIZEDTEXT("en-US","RegisterApplication");
     mAttr.executable = true;
@@ -120,7 +118,7 @@ addRegisterApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId di
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "RegisterApplication"),
                             mAttr, &registerApplicationMethodCallback,
-                            1, &inputArgument, 1, &outputArgument, NULL, &methodNodeId);
+                            1, &inputArgument, 1, &outputArgument, NULL, NULL);
 
     UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 146),
                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
@@ -137,7 +135,6 @@ addUpdateApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId dire
     inputArgument.dataType = UA_TYPES[UA_TYPES_APPLICATIONRECORDDATATYPE].typeId;
     inputArgument.valueRank = -1; /* scalar */
 
-    UA_NodeId methodNodeId;
     UA_MethodAttributes mAttr = UA_MethodAttributes_default;
     mAttr.displayName = UA_LOCALIZEDTEXT("en-US","UpdateApplication");
     mAttr.executable = true;
@@ -147,7 +144,7 @@ addUpdateApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId dire
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "UpdateApplication"),
                             mAttr, &generalMethodCallback,
-                            1, &inputArgument, 0, NULL, NULL, &methodNodeId);
+                            1, &inputArgument, 0, NULL, NULL, NULL);
 
     UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 200),
                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
@@ -163,7 +160,6 @@ addUnregisterApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId 
     inputArgument.dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
     inputArgument.valueRank = -1; /* scalar */
 
-    UA_NodeId methodNodeId;
     UA_MethodAttributes mAttr = UA_MethodAttributes_default;
     mAttr.displayName = UA_LOCALIZEDTEXT("en-US","UnregisterApplication");
     mAttr.executable = true;
@@ -173,7 +169,7 @@ addUnregisterApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId 
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "UnregisterApplication"),
                             mAttr, &generalMethodCallback,
-                            1, &inputArgument, 0, NULL, NULL, &methodNodeId);
+                            1, &inputArgument, 0, NULL, NULL, NULL);
 
     UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 149),
                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
@@ -196,7 +192,6 @@ addGetApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directo
     outputArgument.dataType = UA_TYPES[UA_TYPES_APPLICATIONRECORDDATATYPE].typeId;
     outputArgument.valueRank = -1; /* scalar */
 
-    UA_NodeId methodNodeId;
     UA_MethodAttributes mAttr = UA_MethodAttributes_default;
     mAttr.displayName = UA_LOCALIZEDTEXT("en-US","GetApplication");
     mAttr.executable = true;
@@ -206,7 +201,7 @@ addGetApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directo
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "GetApplication"),
                             mAttr, &generalMethodCallback,
-                            1, &inputArgument, 1, &outputArgument, NULL, &methodNodeId);
+                            1, &inputArgument, 1, &outputArgument, NULL, NULL);
 
     UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 216),
                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
@@ -215,7 +210,6 @@ addGetApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directo
 
 static void
 addQueryApplicationsMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directoryTypeId) {
-
     UA_Argument inputArguments[7];
 
     UA_Argument_init(&inputArguments[0]);
@@ -281,7 +275,6 @@ addQueryApplicationsMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId dire
     outputArguments[2].dataType = UA_TYPES[UA_TYPES_APPLICATIONDESCRIPTION].typeId;
     outputArguments[2].valueRank = 1;
 
-    UA_NodeId methodNodeId;
     UA_MethodAttributes mAttr = UA_MethodAttributes_default;
     mAttr.displayName = UA_LOCALIZEDTEXT("en-US","QueryApplications");
     mAttr.executable = true;
@@ -291,7 +284,7 @@ addQueryApplicationsMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId dire
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "QueryApplications"),
                             mAttr, &generalMethodCallback,
-                            7, inputArguments, 3, outputArguments, NULL, &methodNodeId);
+                            7, inputArguments, 3, outputArguments, NULL, NULL);
 
     UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 992),
                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
@@ -300,7 +293,6 @@ addQueryApplicationsMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId dire
 
 static void
 addQueryServersMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directoryTypeId) {
-
     UA_Argument inputArguments[6];
 
     UA_Argument_init(&inputArguments[0]);
@@ -354,7 +346,6 @@ addQueryServersMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directory
     outputArguments[1].dataType = UA_TYPES[UA_TYPES_SERVERONNETWORK].typeId;
     outputArguments[1].valueRank = 1;
 
-    UA_NodeId methodNodeId;
     UA_MethodAttributes mAttr = UA_MethodAttributes_default;
     mAttr.displayName = UA_LOCALIZEDTEXT("en-US","QueryServers");
     mAttr.executable = true;
@@ -364,7 +355,7 @@ addQueryServersMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directory
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "QueryServers"),
                             mAttr, &generalMethodCallback,
-                            6, inputArguments, 2, outputArguments, NULL, &methodNodeId);
+                            6, inputArguments, 2, outputArguments, NULL, NULL);
 
     UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 151),
                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
@@ -372,7 +363,6 @@ addQueryServersMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directory
 }
 
 static void addDirectoryType(UA_Server *server, UA_UInt16 ns_index){
-
     UA_NodeId directoryTypeId = UA_NODEID_NUMERIC(ns_index, 13);
     UA_ObjectTypeAttributes dtAttr = UA_ObjectTypeAttributes_default;
     dtAttr.displayName = UA_LOCALIZEDTEXT("en-US", "DirectoryType");
@@ -405,14 +395,14 @@ static void addDirectoryType(UA_Server *server, UA_UInt16 ns_index){
     addUnregisterApplicationMethod(server, ns_index, directoryTypeId);
 
     addGetApplicationMethod(server, ns_index, directoryTypeId);
-    //WARNING .NET GDS implements only 5 input arguments
+
+    //WARNING: .NET GDS implements only 5 input arguments, like QueryServersMethod
     addQueryApplicationsMethod(server, ns_index, directoryTypeId);
 
     addQueryServersMethod(server, ns_index, directoryTypeId);
 }
 
 static void addCertificateDirectoryType(UA_Server *server, UA_UInt16 ns_index){
-
     UA_NodeId certificateDirectoryTypeId = UA_NODEID_NUMERIC(ns_index, 63);
     UA_ObjectTypeAttributes dtAttr = UA_ObjectTypeAttributes_default;
     dtAttr.displayName = UA_LOCALIZEDTEXT("en-US", "CertificateDirectoryType");
@@ -440,21 +430,26 @@ static void addCertificateDirectoryType(UA_Server *server, UA_UInt16 ns_index){
 }
 
 
-UA_StatusCode addNamespaceGDS(UA_Server *server) {
+UA_StatusCode UA_Server_InitGdsNamspace(UA_Server *server) {
     UA_UInt16 ns_index = UA_Server_addNamespace(server, "http://opcfoundation.org/UA/GDS/");
+
+    //Part 12, page 14
     addDirectoryType(server, ns_index);
+
+    //Part12, page 31
     addCertificateDirectoryType(server, ns_index);
 
-    UA_ObjectAttributes aa = UA_ObjectAttributes_default;
-    aa.displayName = UA_LOCALIZEDTEXT("en-US", "Directory");
-
+    //Instantiation of CertificateDirectoryType
+    UA_ObjectAttributes directory = UA_ObjectAttributes_default;
+    directory.displayName = UA_LOCALIZEDTEXT("en-US", "Directory");
     UA_Server_addObjectNode(server, UA_NODEID_NUMERIC(ns_index, 141),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
                             UA_QUALIFIEDNAME(ns_index, "Directory"),
                             UA_NODEID_NUMERIC(ns_index, 63), /* this refers to the object type identifier */
-                            aa, NULL, NULL);
+                            directory, NULL, NULL);
 
+    //Regarding TODO not working
     UA_NodeId certificateGroupsId = UA_NODEID_NUMERIC(ns_index, 614);
     UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
     oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "CertificateGroups");
@@ -464,8 +459,6 @@ UA_StatusCode addNamespaceGDS(UA_Server *server) {
                             UA_QUALIFIEDNAME(ns_index, "CertificateGroups"),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_CERTIFICATEGROUPFOLDERTYPE),
                             oAttr, NULL, NULL);
-
-    UA_ApplicationRecordDataType_init(&test);
 
     return UA_STATUSCODE_GOOD;
 }

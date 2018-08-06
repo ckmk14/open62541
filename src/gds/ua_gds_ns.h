@@ -14,15 +14,15 @@ extern "C" {
 
 
 #include "ua_types.h"
-#include "server/ua_server_internal.h"
 #include "ua_plugin_log.h"
 #include "ua_log_stdout.h"
 #include "ua_types_generated.h"
-//#include "server/ua_server_internal.h"
+#include "gds/ua_plugin_registration_manager.h"
+#include "server/ua_server_internal.h"
 
 #ifdef UA_ENABLE_GDS /* conditional compilation */
 
-UA_StatusCode addNamespaceGDS(UA_Server *server);
+UA_StatusCode UA_Server_InitGdsNamspace(UA_Server *server);
 
 #endif
 

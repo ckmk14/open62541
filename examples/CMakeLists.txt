@@ -148,6 +148,7 @@ endif()
 
 
 if(UA_ENABLE_GDS)
-    add_example(tutorial_gds gds/tutorial_gds.c)
+    add_example(a_gds gds/tutorial_gds.c)
     add_example(a_test_datatype gds/test_dataType.c)
+    add_example(a_gds_client gds/gds_client.c)
 endif()

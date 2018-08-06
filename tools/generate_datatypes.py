@@ -428,13 +428,19 @@ inname = ', '.join(list(map(lambda x:x.name.split("/")[-1], args.type_bsd)))
 for builtin in builtin_types:
     types[builtin] = BuiltinType(builtin)
 
-for f in args.type_bsd:
-    parseTypeDefinitions(outname, f, args.namespace)
+for idx, f in enumerate(args.type_bsd):
+    if (idx == 0):
+        parseTypeDefinitions(outname, f, args.namespace)
+    else:
+        parseTypeDefinitions(outname, f, idx + 1)
+
 
 typedescriptions = {}
-for f in args.type_csv:
-    typedescriptions = merge_dicts(typedescriptions, parseTypeDescriptions(f, args.namespace))
-
+for idx, f in enumerate(args.type_csv):
+    if (idx == 0):
+        typedescriptions = merge_dicts(typedescriptions, parseTypeDescriptions(f, args.namespace))
+    else:
+        typedescriptions = merge_dicts(typedescriptions, parseTypeDescriptions(f, idx + 1))
 # Read the selected data types
 selected_types = []
 for f in args.selected_types:
