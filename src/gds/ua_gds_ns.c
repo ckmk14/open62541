@@ -4,8 +4,7 @@
  *    Copyright 2018 (c) Markus Karch, Fraunhofer IOSB
  */
 
-#include <src_generated/ua_types_generated.h>
-#include <ua_types.h>
+
 #include "ua_gds_ns.h"
 
 #ifdef  UA_ENABLE_GDS
@@ -18,16 +17,16 @@ registerApplicationMethodCallback(UA_Server *server,
                       size_t inputSize, const UA_Variant *input,
                       size_t outputSize, UA_Variant *output) {
     printf("\nIn Method registerApplication\n");
-    UA_ApplicationRecordDataType *record = (UA_ApplicationRecordDataType *)input->data;
+
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
     UA_NodeId applicationId;
+    retval = server->config.gds_rm.registerApplication((UA_ApplicationRecordDataType *)input->data, &applicationId);
 
-    UA_GDSRegistrationManager rm = server->config.gds_rm;
-    rm.registerApplication(&rm, record, &applicationId);
+    if (retval == UA_STATUSCODE_GOOD)
+        UA_Variant_setScalarCopy(output, &applicationId, &UA_TYPES[UA_TYPES_NODEID]);
 
-    UA_Variant_setScalarCopy(output, &applicationId, &UA_TYPES[UA_TYPES_NODEID]);
-
-    return UA_STATUSCODE_GOOD;
+    return retval;
 }
 
 

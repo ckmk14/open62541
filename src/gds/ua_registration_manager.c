@@ -8,27 +8,37 @@
 #include "ua_registration_manager.h"
 
 #ifdef UA_ENABLE_GDS
-
-static UA_StatusCode registerApplication(UA_GDSRegistrationManager *rm,
-                                         UA_ApplicationRecordDataType *input,
+//TODO replacement for string localhost
+static UA_StatusCode registerApplication(UA_ApplicationRecordDataType *input,
                                          UA_NodeId *output) {
-    printf("\nIn RegisterCallback\n");
-    UA_ApplicationRecordDataType record;
-    UA_ApplicationRecordDataType_init(&record);
-    UA_ApplicationRecordDataType_copy(&record, input);
+     printf("\nIn RegisterCallback\n");
 
-    gds_registeredServer_entry *newEntry =
-            (gds_registeredServer_entry *)UA_malloc(sizeof(gds_registeredServer_entry));
-    //UA_ApplicationRecordDataType_copy(&newEntry->gds_registeredServer, input);
+    // Check the input, probably more cases to consider   //      || !input->productUri.length
+     //      || !input->applicationNamesSize) {
+     if (!input->applicationUri.length) {
+         return UA_STATUSCODE_BADINVALIDARGUMENT;
+     }
 
-    UA_ApplicationRecordDataType_init(&newEntry->gds_registeredServer);
-    newEntry->gds_registeredServer.applicationUri = UA_STRING("Test");
+     size_t index = 0;
+     while(index < input->applicationNamesSize) {
+         if(!input->applicationNames[index].locale.length
+            || !input->applicationNames[index].text.length){
+             return UA_STATUSCODE_BADINVALIDARGUMENT;
+        }
+        index++;
+     }
 
-    LIST_INSERT_HEAD(&gds_registeredServers_list, newEntry, pointers);
+     gds_registeredServer_entry *newEntry = (gds_registeredServer_entry *)UA_malloc(sizeof(gds_registeredServer_entry));
+     UA_ApplicationRecordDataType *record = &newEntry->gds_registeredServer;
+     UA_ApplicationRecordDataType_init(record);
+     record->applicationUri.length = input->applicationUri.length;
+     record->applicationUri.data = (UA_Byte *) malloc(input->applicationUri.length * sizeof(UA_Byte));
+     memcpy(record->applicationUri.data, input->applicationUri.data,input->applicationUri.length);
 
-    *output = record.applicationId = UA_NODEID_GUID(2, UA_Guid_random());
+     LIST_INSERT_HEAD(&gds_registeredServers_list, newEntry, pointers);
+     *output = UA_NODEID_GUID(2, UA_Guid_random());
 
-    return UA_STATUSCODE_GOOD;
+     return UA_STATUSCODE_GOOD;
 }
 
 
@@ -36,6 +46,8 @@ static void deleteMembers(UA_GDSRegistrationManager *rm) {
     printf("\nIN\n");
     gds_registeredServer_entry *gds_rs, *gds_rs_tmp;
     LIST_FOREACH_SAFE(gds_rs, &gds_registeredServers_list, pointers, gds_rs_tmp) {
+        printf("\nIN2\n");
+        UA_String_deleteMembers(&gds_rs->gds_registeredServer.applicationUri);
         LIST_REMOVE(gds_rs, pointers);
         UA_free(gds_rs);
     }

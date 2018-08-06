@@ -9,6 +9,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <open62541.h>
 #include "open62541.h"
 
 UA_Logger logger = UA_Log_Stdout;
@@ -26,14 +27,14 @@ int main(int argc, char **argv) {
 
     UA_ServerConfig *config = UA_ServerConfig_new_default();
     UA_String_deleteMembers(&config->applicationDescription.applicationUri);
-    config->applicationDescription.applicationUri =
-            UA_String_fromChars("urn:open62541.example.server_register");
-
+    config->applicationDescription.applicationUri = UA_String_fromChars("urn:open62541.example.server_register");
 
     //has to be put in config
     UA_InitGDSRegistrationManager(&config->gds_rm);
 
     UA_Server *server = UA_Server_new(config);
+
+
     UA_Client *client = UA_Client_new(UA_ClientConfig_default);
     UA_StatusCode retval = UA_Client_connect_username(client, "opc.tcp://localhost:4841", "user1", "password");
     if(retval != UA_STATUSCODE_GOOD) {
@@ -41,11 +42,16 @@ int main(int argc, char **argv) {
         return (int)retval;
     }
 
-
-    UA_Variant input;
     UA_ApplicationRecordDataType record;
     UA_ApplicationRecordDataType_init(&record);
-    UA_Variant_init(&input);
+    record.applicationUri = config->applicationDescription.applicationUri;
+//    record.productUri = UA_STRING("urn:open62541.example.server_register");
+//    ++record.applicationNamesSize;
+//    UA_LocalizedText applicationName = UA_LOCALIZEDTEXT("en-US", "open62541_Server");
+//    record.applicationNames = &applicationName;
+
+
+    UA_Variant input;
     UA_Variant_setScalarCopy(&input, &record, &UA_TYPES[UA_TYPES_APPLICATIONRECORDDATATYPE]);
     size_t outputSize;
     UA_Variant *output;
@@ -60,7 +66,8 @@ int main(int argc, char **argv) {
     }
     UA_Variant_deleteMembers(&input);
 
-
+  //  UA_String_deleteMembers(&record.productUri);
+   // UA_LocalizedText_deleteMembers(&record.applicationNames[0]);
     UA_Client_disconnect(client);
     UA_Client_delete(client);
     UA_Server_delete(server);

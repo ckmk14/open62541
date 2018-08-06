@@ -30,8 +30,7 @@ LIST_HEAD(gds_list, gds_registeredServer_entry) gds_registeredServers_list;
 struct UA_GDSRegistrationManager {
     UA_Logger logger;
 
-    UA_StatusCode (*registerApplication)(UA_GDSRegistrationManager *rm,
-                                         UA_ApplicationRecordDataType *record,
+    UA_StatusCode (*registerApplication)(UA_ApplicationRecordDataType *record,
                                          UA_NodeId *newNodeId);
 
     void (*deleteMembers)(UA_GDSRegistrationManager *rm);
