@@ -18,10 +18,9 @@ registerApplicationMethodCallback(UA_Server *server,
                       size_t outputSize, UA_Variant *output) {
     printf("\nIn Method registerApplication\n");
 
-    UA_StatusCode retval = UA_STATUSCODE_GOOD;
-
     UA_NodeId applicationId;
-    retval = server->config.gds_rm.registerApplication((UA_ApplicationRecordDataType *)input->data, &applicationId);
+    UA_StatusCode retval =
+            server->config.gds_rm.registerApplication((UA_ApplicationRecordDataType *)input->data, &applicationId);
 
     if (retval == UA_STATUSCODE_GOOD)
         UA_Variant_setScalarCopy(output, &applicationId, &UA_TYPES[UA_TYPES_NODEID]);
