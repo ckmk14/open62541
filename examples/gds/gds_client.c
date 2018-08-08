@@ -42,23 +42,22 @@ int main(int argc, char **argv) {
         return (int)retval;
     }
 
-//    UA_ApplicationRecordDataType record;
-//    UA_ApplicationRecordDataType_init(&record);
-//    record.applicationUri = config->applicationDescription.applicationUri;
-//    record.applicationType = UA_APPLICATIONTYPE_SERVER;
-//    record.productUri = UA_STRING("urn:open62541.example.server_register");
-//    record.applicationNamesSize++;
-//    UA_LocalizedText applicationName = UA_LOCALIZEDTEXT("en-US", "open62541_Server");
-//    record.applicationNames = &applicationName;
-//    record.discoveryUrlsSize++;
-//    UA_String discoveryUrl = UA_STRING("opc.tcp://localhost:4840");
-//    record.discoveryUrls = &discoveryUrl;
-//    record.serverCapabilitiesSize++;
-//    UA_String serverCap = UA_STRING("LDS");
-//    record.serverCapabilities = &serverCap;
     UA_ApplicationRecordDataType record;
     UA_ApplicationRecordDataType_init(&record);
-//    record.applicationUri = config->applicationDescription.applicationUri;
+    record.applicationUri = config->applicationDescription.applicationUri;
+    record.applicationType = UA_APPLICATIONTYPE_SERVER;
+    record.productUri = UA_STRING("urn:open62541.example.server_register");
+    record.applicationNamesSize++;
+    UA_LocalizedText applicationName = UA_LOCALIZEDTEXT("en-US", "open62541_Server");
+    record.applicationNames = &applicationName;
+    record.discoveryUrlsSize++;
+    UA_String discoveryUrl = UA_STRING("opc.tcp://localhost:4840");
+    record.discoveryUrls = &discoveryUrl;
+    record.serverCapabilitiesSize++;
+    UA_String serverCap = UA_STRING("LDS");
+    record.serverCapabilities = &serverCap;
+
+
 
 
     UA_Variant input;

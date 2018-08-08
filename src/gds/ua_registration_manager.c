@@ -12,11 +12,11 @@
 
 /*
     UA_NodeId applicationId;
-    UA_String applicationUri;
-    UA_ApplicationType applicationType;
-    size_t applicationNamesSize;
-    UA_LocalizedText *applicationNames;
-    UA_String productUri;
+    UA_String applicationUri; xxx
+    UA_ApplicationType applicationType; xxx
+    size_t applicationNamesSize; xxx
+    UA_LocalizedText *applicationNames; xxx
+    UA_String productUri; xxx
     size_t discoveryUrlsSize;
     UA_String *discoveryUrls;
     size_t serverCapabilitiesSize;
@@ -30,13 +30,13 @@
 static UA_StatusCode registerApplication(UA_ApplicationRecordDataType *input,
                                          UA_NodeId *output) {
      printf("\nIn RegisterCallback\n");
-
+     size_t index = 0;
      gds_registeredServer_entry *newEntry = (gds_registeredServer_entry *)UA_malloc(sizeof(gds_registeredServer_entry));
      UA_ApplicationRecordDataType *record = &newEntry->gds_registeredServer;
      UA_ApplicationRecordDataType_init(record);
 
      //ApplicationUri
-     if (input->applicationUri.length <= 0) {
+     if (UA_String_equal(&input->applicationUri, &UA_STRING_NULL)) {
          goto error;
      }
      record->applicationUri.length = input->applicationUri.length;
@@ -53,19 +53,16 @@ static UA_StatusCode registerApplication(UA_ApplicationRecordDataType *input,
 
      //ApplicationNames
      if(input->applicationNamesSize <= 0) {
-         return UA_STATUSCODE_BADINVALIDARGUMENT;
+         goto error;
      }
 
-     size_t index = 0;
      record->applicationNamesSize = input->applicationNamesSize;
      record->applicationNames = (UA_LocalizedText *)
-                                    malloc(record->applicationNamesSize *  sizeof(UA_LocalizedText));
+             UA_calloc(record->applicationNamesSize, sizeof(UA_LocalizedText));
      while(index < input->applicationNamesSize) {
-         if(input->applicationNames[index].locale.length <= 0
-            || input->applicationNames[index].text.length <= 0
-            || input->applicationNames[index].locale.data == NULL
-            || input->applicationNames[index].text.data == NULL){
-             return UA_STATUSCODE_BADINVALIDARGUMENT;
+         if(UA_String_equal(&input->applicationNames[index].locale, &UA_STRING_NULL)
+            || UA_String_equal(&input->applicationNames[index].text, &UA_STRING_NULL)) {
+             goto error;
          }
          UA_LocalizedText_init(&record->applicationNames[index]);
 
@@ -83,8 +80,8 @@ static UA_StatusCode registerApplication(UA_ApplicationRecordDataType *input,
      }
 
      //ProductUri
-     if(input->productUri.length <= 0) {
-         return UA_STATUSCODE_BADINVALIDARGUMENT;
+     if (UA_String_equal(&input->productUri, &UA_STRING_NULL)) {
+         goto error;
      }
      record->productUri.length = input->productUri.length;
      record->productUri.data = (UA_Byte *) malloc(input->productUri.length * sizeof(UA_Byte));
@@ -95,18 +92,17 @@ static UA_StatusCode registerApplication(UA_ApplicationRecordDataType *input,
      //For servers it is mandatory to specify at least one discoveryUrl.
      //For Clients it is only required if they support reverse connect TODO(inv+ as prefix)
      if(record->applicationType != UA_APPLICATIONTYPE_CLIENT && input->discoveryUrlsSize <= 0) {
-         return UA_STATUSCODE_BADINVALIDARGUMENT;
+         goto error;
      }
 
      if (input->discoveryUrlsSize > 0) {
          index = 0;
          record->discoveryUrlsSize = input->discoveryUrlsSize;
          record->discoveryUrls = (UA_String *)
-                 malloc(record->discoveryUrlsSize *  sizeof(UA_String));
+                 UA_calloc(record->discoveryUrlsSize, sizeof(UA_String));
          while(index < record->discoveryUrlsSize) {
-             if (input->discoveryUrls[index].length <= 0
-                 || input->discoveryUrls[index].data == NULL) {
-                 return UA_STATUSCODE_BADINVALIDARGUMENT;
+             if (UA_String_equal(&input->discoveryUrls[index], &UA_STRING_NULL)) {
+                 goto error;
              }
              UA_String_init(&record->discoveryUrls[index]);
 
@@ -123,18 +119,17 @@ static UA_StatusCode registerApplication(UA_ApplicationRecordDataType *input,
 
      //ServerCapabilities
      if(record->applicationType != UA_APPLICATIONTYPE_CLIENT && input->serverCapabilitiesSize <= 0) {
-         return UA_STATUSCODE_BADINVALIDARGUMENT;
+         goto error;
      }
 
      if (input->serverCapabilitiesSize > 0) {
          index = 0;
          record->serverCapabilitiesSize = input->serverCapabilitiesSize;
          record->serverCapabilities = (UA_String *)
-                 malloc(record->serverCapabilitiesSize *  sizeof(UA_String));
+                 UA_calloc(record->serverCapabilitiesSize, sizeof(UA_String));
          while(index < record->serverCapabilitiesSize) {
-             if (input->serverCapabilities[index].length <= 0
-                 || input->serverCapabilities[index].data == NULL) {
-                 return UA_STATUSCODE_BADINVALIDARGUMENT;
+             if (UA_String_equal(&input->serverCapabilities[index], &UA_STRING_NULL)) {
+                 goto error;
              }
              UA_String_init(&record->serverCapabilities[index]);
 
@@ -161,11 +156,44 @@ static UA_StatusCode registerApplication(UA_ApplicationRecordDataType *input,
      return UA_STATUSCODE_GOOD;
 
 error:
-     if (!UA_String_equal(&record->applicationUri, &UA_STRING_NULL)){
-        UA_String_deleteMembers(&record->applicationUri);
+     UA_String_deleteMembers(&record->applicationUri);
+
+     if (record->applicationNames != NULL) {
+         index = 0;
+         while (index < record->applicationNamesSize) {
+             if (!UA_String_equal(&record->applicationNames[index].locale, &UA_STRING_NULL)) {
+                 UA_String_deleteMembers(&record->applicationNames[index].locale);
+             }
+             if (!UA_String_equal(&record->applicationNames[index].text, &UA_STRING_NULL)) {
+                 UA_String_deleteMembers(&record->applicationNames[index].text);
+             }index++;
+         }
+         UA_free(record->applicationNames);
      }
 
-     //TODO Tomorrow
+     UA_String_deleteMembers(&record->productUri);
+
+     if (record->discoveryUrls != NULL) {
+         index = 0;
+         while (index < record->discoveryUrlsSize) {
+             if (!UA_String_equal(&record->discoveryUrls[index], &UA_STRING_NULL)) {
+                 UA_String_deleteMembers(&record->discoveryUrls[index]);
+             }
+             index++;
+         }
+         UA_free(record->discoveryUrls);
+     }
+
+     if (record->serverCapabilities != NULL) {
+         index = 0;
+         while (index < record->serverCapabilitiesSize) {
+             if (!UA_String_equal(&record->serverCapabilities[index], &UA_STRING_NULL)) {
+                 UA_String_deleteMembers(&record->serverCapabilities[index]);
+             }
+             index++;
+         }
+         UA_free(record->serverCapabilities);
+     }
 
      UA_free(record);
      return UA_STATUSCODE_BADINVALIDARGUMENT;
