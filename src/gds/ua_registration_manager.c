@@ -4,7 +4,6 @@
  *    Copyright 2018 (c) Markus Karch, Fraunhofer IOSB
  */
 #include <src_generated/ua_types_generated.h>
-#include <ua_types.h>
 #include "ua_registration_manager.h"
 
 #ifdef UA_ENABLE_GDS
@@ -21,8 +20,7 @@
     UA_String *discoveryUrls;
     size_t serverCapabilitiesSize;
     UA_String *serverCapabilities;
-
- * */
+*/
 
 
 //TODO replacement for string localhost in discoveryurl
@@ -116,7 +114,6 @@ static UA_StatusCode registerApplication(UA_ApplicationRecordDataType *input,
          }
      }
 
-
      //ServerCapabilities
      if(record->applicationType != UA_APPLICATIONTYPE_CLIENT && input->serverCapabilitiesSize <= 0) {
          goto error;
@@ -143,15 +140,10 @@ static UA_StatusCode registerApplication(UA_ApplicationRecordDataType *input,
          }
      }
 
+     record->applicationId = UA_NODEID_GUID(2, UA_Guid_random());
+     *output = record->applicationId;
      LIST_INSERT_HEAD(&gds_registeredServers_list, newEntry, pointers);
-     *output = UA_NODEID_GUID(2, UA_Guid_random());
-
-
-
-     gds_registeredServer_entry *gds_rs, *gds_rs_tmp;
-     LIST_FOREACH_SAFE(gds_rs, &gds_registeredServers_list, pointers, gds_rs_tmp) {
-         printf("\nIN2\n");
-     }
+     gds_registeredServersSize++;
 
      return UA_STATUSCODE_GOOD;
 
@@ -199,6 +191,33 @@ error:
      return UA_STATUSCODE_BADINVALIDARGUMENT;
 }
 
+static UA_StatusCode findApplication(UA_String *applicationUri,
+                                      size_t *outputSize,
+                                      UA_ApplicationRecordDataType **output) {
+
+    /* Temporarily store all the pointers which we found to avoid reiterating
+     * through the list */
+    if (gds_registeredServersSize > 0) {
+        size_t foundServersSize = 0;
+        UA_STACKARRAY(UA_ApplicationRecordDataType*, gds_foundServers, gds_registeredServersSize);
+        gds_registeredServer_entry* current;
+        LIST_FOREACH(current, &gds_registeredServers_list, pointers) {
+            if(UA_String_equal(&current->gds_registeredServer.applicationUri, applicationUri)) {
+                gds_foundServers[foundServersSize] = &current->gds_registeredServer;
+                foundServersSize++;
+            }
+        }
+        *outputSize = foundServersSize;
+        if (foundServersSize > 0) {
+            *output = (UA_ApplicationRecordDataType *) UA_calloc(foundServersSize, sizeof(UA_ApplicationRecordDataType));
+            for(size_t i = 0; i < foundServersSize; i++) {
+                memcpy(output[i], gds_foundServers[i], sizeof(UA_ApplicationRecordDataType));
+                i++;
+            }
+        }
+    }
+    return UA_STATUSCODE_GOOD;
+}
 
 static void deleteMembers(UA_GDSRegistrationManager *rm) {
     printf("\nIN\n");
@@ -239,9 +258,10 @@ static void deleteMembers(UA_GDSRegistrationManager *rm) {
 }
 
 UA_StatusCode UA_InitGDSRegistrationManager(UA_GDSRegistrationManager *rm){
-
+    gds_registeredServersSize = 0;
     LIST_INIT(&gds_registeredServers_list);
     rm->registerApplication = registerApplication;
+    rm->findApplication = findApplication;
     rm->deleteMembers = deleteMembers;
     return UA_STATUSCODE_GOOD;
 }

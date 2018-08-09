@@ -25,6 +25,8 @@ typedef struct gds_registeredServer_entry {
 struct UA_GDSRegistrationManager;
 typedef struct UA_GDSRegistrationManager UA_GDSRegistrationManager;
 
+
+size_t gds_registeredServersSize;
 LIST_HEAD(gds_list, gds_registeredServer_entry) gds_registeredServers_list;
 
 struct UA_GDSRegistrationManager {
@@ -33,6 +35,9 @@ struct UA_GDSRegistrationManager {
     UA_StatusCode (*registerApplication)(UA_ApplicationRecordDataType *record,
                                          UA_NodeId *newNodeId);
 
+    UA_StatusCode (*findApplication)(UA_String *applicationUri,
+                                     size_t *outputSize,
+                                     UA_ApplicationRecordDataType **output);
     void (*deleteMembers)(UA_GDSRegistrationManager *rm);
 };
 

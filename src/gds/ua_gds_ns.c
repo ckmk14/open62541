@@ -5,6 +5,8 @@
  */
 
 
+#include <src_generated/ua_types_generated.h>
+#include <ua_types.h>
 #include "ua_gds_ns.h"
 
 #ifdef  UA_ENABLE_GDS
@@ -29,6 +31,8 @@ registerApplicationMethodCallback(UA_Server *server,
 }
 
 
+UA_ApplicationRecordDataType record;
+
 static UA_StatusCode
 findApplicationMethodCallback(UA_Server *server,
                       const UA_NodeId *sessionId, void *sessionHandle,
@@ -37,16 +41,16 @@ findApplicationMethodCallback(UA_Server *server,
                       size_t inputSize, const UA_Variant *input,
                       size_t outputSize, UA_Variant *output) {
     printf("\nIn Method findApplication\n");
+    size_t length = 0;
+    UA_ApplicationRecordDataType *array;
+    UA_StatusCode retval =
+            server->config.gds_rm.findApplication((UA_String *)input->data, &length, &array);
 
-    //if (!UA_NodeId_isNull(&test.applicationId)){
-    //    printf("\nIn Method findApplication in if\n");
-
-    //    UA_Variant_setArrayCopy(output, &test, 1, &UA_TYPES[UA_TYPES_APPLICATIONRECORDDATATYPE]);
-   // }
- //
-    // UA_ApplicationRecordDataType *record = (UA_ApplicationRecordDataType *)input->data;
-
-    return UA_STATUSCODE_GOOD;
+    if (length > 0){
+        UA_Variant_setArrayCopy(output, array, length, &UA_TYPES[UA_TYPES_APPLICATIONRECORDDATATYPE]);
+        UA_free(array);
+    }
+    return retval;
 }
 static UA_StatusCode
 generalMethodCallback(UA_Server *server,

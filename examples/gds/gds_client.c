@@ -33,8 +33,6 @@ int main(int argc, char **argv) {
     UA_InitGDSRegistrationManager(&config->gds_rm);
 
     UA_Server *server = UA_Server_new(config);
-
-
     UA_Client *client = UA_Client_new(UA_ClientConfig_default);
     UA_StatusCode retval = UA_Client_connect_username(client, "opc.tcp://localhost:4841", "user1", "password");
     if(retval != UA_STATUSCODE_GOOD) {
@@ -57,9 +55,6 @@ int main(int argc, char **argv) {
     UA_String serverCap = UA_STRING("LDS");
     record.serverCapabilities = &serverCap;
 
-
-
-
     UA_Variant input;
     UA_Variant_setScalarCopy(&input, &record, &UA_TYPES[UA_TYPES_APPLICATIONRECORDDATATYPE]);
     size_t outputSize;
@@ -78,8 +73,41 @@ int main(int argc, char **argv) {
     }
     UA_Variant_deleteMembers(&input);
 
-  //  UA_String_deleteMembers(&record.productUri);
-   // UA_LocalizedText_deleteMembers(&record.applicationNames[0]);
+
+    UA_String URI = config->applicationDescription.applicationUri;
+    UA_Variant input2;
+    UA_Variant_setScalarCopy(&input2, &URI, &UA_TYPES[UA_TYPES_STRING]);
+    size_t outputSize2;
+    UA_Variant *output2;
+    retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 141),
+                            UA_NODEID_NUMERIC(2, 143), 1, &input2, &outputSize2, &output2);
+    if(retval == UA_STATUSCODE_GOOD) {
+        UA_ExtensionObject *eo = (UA_ExtensionObject*) output2[0].data;
+        UA_ApplicationRecordDataType *record2 = (UA_ApplicationRecordDataType *) eo->content.decoded.data;
+        printf("%u", record2->applicationId.namespaceIndex);
+    } else {
+        printf("Method call was unsuccessful, and %x returned values available.\n", retval);
+    }
+
+    UA_String URI3 = UA_STRING("urn:ccc");
+    UA_Variant input3;
+    UA_Variant_setScalarCopy(&input3, &URI3, &UA_TYPES[UA_TYPES_STRING]);
+    size_t outputSize3;
+    UA_Variant *output3;
+    retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 141),
+                            UA_NODEID_NUMERIC(2, 143), 1, &input3, &outputSize3, &output3);
+    if(retval == UA_STATUSCODE_GOOD) {
+        UA_ExtensionObject *eo = (UA_ExtensionObject*) output3[0].data;
+        if (eo != NULL) {
+            UA_ApplicationRecordDataType *record3 = (UA_ApplicationRecordDataType *) eo->content.decoded.data;
+            printf("%u", record3->applicationId.namespaceIndex);
+        }
+
+    } else {
+        printf("Method call was unsuccessful, and %x returned values available.\n", retval);
+    }
+
+
     UA_Client_disconnect(client);
     UA_Client_delete(client);
     UA_Server_delete(server);
