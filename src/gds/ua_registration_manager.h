@@ -12,18 +12,33 @@
 extern "C" {
 #endif
 
-#include "gds/ua_plugin_registration_manager.h"
 #include "ua_plugin_log.h"
+#include "server/ua_server_internal.h"
 
 #ifdef UA_ENABLE_GDS
 
-UA_EXPORT UA_StatusCode UA_InitGDSRegistrationManager(UA_GDSRegistrationManager *rm);
+UA_StatusCode GDS_registerApplication(UA_Server *server,
+                                      UA_ApplicationRecordDataType *input,
+                                      size_t certificateGroupSize,
+                                      UA_NodeId *certificateGroupIds,
+                                      UA_NodeId *output);
+UA_StatusCode
+GDS_findApplication(UA_Server *server,
+                    UA_String *applicationUri,
+                    size_t *outputSize,
+                    UA_ApplicationRecordDataType **output);
+
+UA_StatusCode
+GDS_unregisterApplication(UA_Server *server,
+                          UA_NodeId *nodeId);
+
+void
+GDS_deleteMembers(UA_Server *rm);
 
 #endif /* UA_ENABLE_GDS */
 
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif //OPEN62541_UA_REGISTRATION_MANAGER_H

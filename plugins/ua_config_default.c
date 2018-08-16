@@ -610,7 +610,7 @@ UA_ServerConfig_delete(UA_ServerConfig *config) {
     /* Server Description */
     UA_BuildInfo_deleteMembers(&config->buildInfo);
     UA_ApplicationDescription_deleteMembers(&config->applicationDescription);
-#ifdef UA_ENABLE_DISCOVERY
+#if  defined(UA_ENABLE_DISCOVERY) || defined(UA_ENABLE_GDS)
     UA_String_deleteMembers(&config->mdnsServerName);
     UA_Array_delete(config->serverCapabilities, config->serverCapabilitiesSize,
                     &UA_TYPES[UA_TYPES_STRING]);
@@ -618,9 +618,7 @@ UA_ServerConfig_delete(UA_ServerConfig *config) {
     config->serverCapabilitiesSize = 0;
 #endif
 
-#ifdef UA_ENABLE_GDS
-    config->gds_rm.deleteMembers(&config->gds_rm);
-#endif
+
     /* Nodestore */
     if(config->nodestore.deleteNodestore)
         config->nodestore.deleteNodestore(config->nodestore.context);

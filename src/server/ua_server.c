@@ -28,6 +28,10 @@
 #include "ua_subscription.h"
 #endif
 
+#ifdef UA_ENABLE_GDS
+#include "gds/ua_registration_manager.h"
+#endif
+
 /**********************/
 /* Namespace Handling */
 /**********************/
@@ -145,6 +149,11 @@ void UA_Server_delete(UA_Server *server) {
 
 #ifdef UA_ENABLE_PUBSUB
     UA_PubSubManager_delete(server, &server->pubSubManager);
+#endif
+
+
+#ifdef UA_ENABLE_GDS
+    GDS_deleteMembers(server);
 #endif
 
 #ifdef UA_ENABLE_DISCOVERY
@@ -291,6 +300,11 @@ UA_Server_new(const UA_ServerConfig *config) {
     /* Add a regular callback for cleanup and maintenance */
     UA_Server_addRepeatedCallback(server, (UA_ServerCallback)UA_Server_cleanup, NULL,
                                   10000, NULL);
+
+#ifdef UA_ENABLE_GDS
+    LIST_INIT(&server->gds_registeredServers_list);
+    server->gds_registeredServersSize = 0;
+#endif
 
     /* Initialized discovery database */
 #ifdef UA_ENABLE_DISCOVERY

@@ -415,7 +415,6 @@ endif()
 
 set(exported_headers ${exported_headers}
                      ${ua_architecture_headers_beginning}
-                     ${PROJECT_SOURCE_DIR}/deps/queue.h
                      ${PROJECT_BINARY_DIR}/src_generated/ua_config.h
                      ${PROJECT_SOURCE_DIR}/deps/ms_stdint.h
                      ${PROJECT_BINARY_DIR}/src_generated/ua_statuscodes.h
@@ -433,8 +432,7 @@ set(exported_headers ${exported_headers}
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_securitypolicy.h
                      ${PROJECT_SOURCE_DIR}/include/ua_server_pubsub.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_pubsub.h
-                     ${PROJECT_SOURCE_DIR}/include/gds/ua_plugin_ca.h
-                     ${PROJECT_SOURCE_DIR}/include/gds/ua_plugin_registration_manager.h
+                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_ca.h
                      ${PROJECT_SOURCE_DIR}/src/gds/ua_gds_ns.h
                      ${PROJECT_SOURCE_DIR}/include/ua_plugin_nodestore.h
                      ${PROJECT_SOURCE_DIR}/include/ua_server_config.h
@@ -444,7 +442,8 @@ set(exported_headers ${exported_headers}
                      ${PROJECT_SOURCE_DIR}/include/ua_client_subscriptions.h
                      ${PROJECT_SOURCE_DIR}/include/ua_client_highlevel_async.h)
 
-set(internal_headers ${PROJECT_SOURCE_DIR}/deps/pcg_basic.h
+set(internal_headers ${PROJECT_SOURCE_DIR}/deps/queue.h
+                     ${PROJECT_SOURCE_DIR}/deps/pcg_basic.h
                      ${PROJECT_SOURCE_DIR}/deps/libc_time.h
                      ${PROJECT_SOURCE_DIR}/deps/base64.h
                      ${PROJECT_SOURCE_DIR}/src/ua_util_internal.h
@@ -464,6 +463,8 @@ set(internal_headers ${PROJECT_SOURCE_DIR}/deps/pcg_basic.h
                      ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub.h
                      ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_manager.h
                      ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_ns0.h
+                     ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.h
+                     ${PROJECT_SOURCE_DIR}/src/gds/ua_certificate_manager.h
                      ${PROJECT_SOURCE_DIR}/src/server/ua_server_internal.h
                      ${PROJECT_SOURCE_DIR}/src/server/ua_services.h
                      ${PROJECT_BINARY_DIR}/src_generated/ua_namespace0.h
@@ -498,6 +499,8 @@ set(lib_sources ${PROJECT_SOURCE_DIR}/src/ua_types.c
                 ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_manager.c
                 ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_ns0.c
                 ${PROJECT_SOURCE_DIR}/src/gds/ua_gds_ns.c
+                ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.c
+                ${PROJECT_SOURCE_DIR}/src/gds/ua_certificate_manager.c
                 # services
                 ${PROJECT_SOURCE_DIR}/src/server/ua_services_view.c
                 ${PROJECT_SOURCE_DIR}/src/server/ua_services_call.c
@@ -553,10 +556,7 @@ endif()
 
 if(UA_ENABLE_GDS)
     list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/src/gds/ua_ca_gnutls.h)
-    list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.h)
-
     list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/src/gds/ua_ca_gnutls.c)
-    list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.c)
 endif()
 
 

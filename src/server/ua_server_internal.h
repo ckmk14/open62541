@@ -59,6 +59,14 @@ typedef struct UA_DispatchQueue UA_DispatchQueue;
 
 #endif /* UA_ENABLE_MULTITHREADING */
 
+#ifdef UA_ENABLE_GDS
+typedef struct gds_registeredServer_entry {
+    LIST_ENTRY(gds_registeredServer_entry) pointers;
+    UA_ApplicationRecordDataType gds_registeredServer;
+    size_t certificateGroupSize;
+    UA_NodeId *certificateGroups;
+} gds_registeredServer_entry;
+#endif
 
 #ifdef UA_ENABLE_DISCOVERY
 
@@ -115,6 +123,11 @@ struct UA_Server {
     /* Security */
     UA_SecureChannelManager secureChannelManager;
     UA_SessionManager sessionManager;
+
+#ifdef UA_ENABLE_GDS
+    LIST_HEAD(gds_list, gds_registeredServer_entry) gds_registeredServers_list;
+    size_t gds_registeredServersSize;
+#endif
 
 #ifdef UA_ENABLE_DISCOVERY
     /* Discovery */

@@ -8,8 +8,42 @@
 #include <src_generated/ua_types_generated.h>
 #include <ua_types.h>
 #include "ua_gds_ns.h"
+#include "ua_registration_manager.h"
+#include "ua_certificate_manager.h"
 
 #ifdef  UA_ENABLE_GDS
+
+/**********************************************/
+/*         CertificateManager-Callbacks       */
+/**********************************************/
+
+static UA_StatusCode
+startNewKeyPairRequestMethodCallback(UA_Server *server,
+                                  const UA_NodeId *sessionId, void *sessionHandle,
+                                  const UA_NodeId *methodId, void *methodContext,
+                                  const UA_NodeId *objectId, void *objectContext,
+                                  size_t inputSize, const UA_Variant *input,
+                                  size_t outputSize, UA_Variant *output) {
+   // GDS_StartNewKeyPairRequest(server, NULL, NULL);
+    return UA_STATUSCODE_GOOD;
+}
+
+static UA_StatusCode
+getCertificateGroupsMethodCallback(UA_Server *server,
+                                   const UA_NodeId *sessionId, void *sessionHandle,
+                                   const UA_NodeId *methodId, void *methodContext,
+                                   const UA_NodeId *objectId, void *objectContext,
+                                   size_t inputSize, const UA_Variant *input,
+                                   size_t outputSize, UA_Variant *output) {
+
+
+    return UA_STATUSCODE_GOOD;
+}
+
+
+/**********************************************/
+/*         RegistrationManager-Callbacks      */
+/**********************************************/
 
 static UA_StatusCode
 registerApplicationMethodCallback(UA_Server *server,
@@ -21,17 +55,17 @@ registerApplicationMethodCallback(UA_Server *server,
     printf("\nIn Method registerApplication\n");
 
     UA_NodeId applicationId;
+
+    //The DefaultApplicationGroup is the default value for new applications
+    UA_NodeId dag =  UA_NODEID_NUMERIC(2, 615);
     UA_StatusCode retval =
-            server->config.gds_rm.registerApplication((UA_ApplicationRecordDataType *)input->data, &applicationId);
+            GDS_registerApplication(server, (UA_ApplicationRecordDataType *)input->data, 1, &dag, &applicationId);
 
     if (retval == UA_STATUSCODE_GOOD)
         UA_Variant_setScalarCopy(output, &applicationId, &UA_TYPES[UA_TYPES_NODEID]);
 
     return retval;
 }
-
-
-UA_ApplicationRecordDataType record;
 
 static UA_StatusCode
 findApplicationMethodCallback(UA_Server *server,
@@ -44,7 +78,7 @@ findApplicationMethodCallback(UA_Server *server,
     size_t length = 0;
     UA_ApplicationRecordDataType *array;
     UA_StatusCode retval =
-            server->config.gds_rm.findApplication((UA_String *)input->data, &length, &array);
+            GDS_findApplication(server, (UA_String *)input->data, &length, &array);
 
     if (length > 0){
         UA_Variant_setArrayCopy(output, array, length, &UA_TYPES[UA_TYPES_APPLICATIONRECORDDATATYPE]);
@@ -52,6 +86,18 @@ findApplicationMethodCallback(UA_Server *server,
     }
     return retval;
 }
+
+
+static UA_StatusCode
+unregisterApplicationMethodCallback(UA_Server *server,
+                              const UA_NodeId *sessionId, void *sessionHandle,
+                              const UA_NodeId *methodId, void *methodContext,
+                              const UA_NodeId *objectId, void *objectContext,
+                              size_t inputSize, const UA_Variant *input,
+                              size_t outputSize, UA_Variant *output) {
+    return GDS_unregisterApplication(server, (UA_NodeId *) input->data);
+}
+
 static UA_StatusCode
 generalMethodCallback(UA_Server *server,
                          const UA_NodeId *sessionId, void *sessionHandle,
@@ -59,9 +105,306 @@ generalMethodCallback(UA_Server *server,
                          const UA_NodeId *objectId, void *objectContext,
                          size_t inputSize, const UA_Variant *input,
                          size_t outputSize, UA_Variant *output) {
-    printf("\nIn Method\n");
+    printf("\nIn General Method\n");
     return UA_STATUSCODE_GOOD;
 }
+
+/**********************************************/
+/*         CertificateManager-Methods         */
+/**********************************************/
+
+static void
+addStartSigningRequestMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directoryTypeId) {
+    UA_Argument inputArguments[4];
+
+    UA_Argument_init(&inputArguments[0]);
+    inputArguments[0].description = UA_LOCALIZEDTEXT("en-US", "applicationId");
+    inputArguments[0].name = UA_STRING("ApplicationId");
+    inputArguments[0].dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    inputArguments[0].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&inputArguments[1]);
+    inputArguments[1].description = UA_LOCALIZEDTEXT("en-US", "certificateGroupId");
+    inputArguments[1].name = UA_STRING("CertificateGroupId");
+    inputArguments[1].dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    inputArguments[1].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&inputArguments[2]);
+    inputArguments[2].description = UA_LOCALIZEDTEXT("en-US", "certificateTypeId");
+    inputArguments[2].name = UA_STRING("CertificateTypeId");
+    inputArguments[2].dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    inputArguments[2].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&inputArguments[3]);
+    inputArguments[3].description = UA_LOCALIZEDTEXT("en-US", "certificateRequest");
+    inputArguments[3].name = UA_STRING("CertificateRequest");
+    inputArguments[3].dataType = UA_TYPES[UA_TYPES_BYTESTRING].typeId;
+    inputArguments[3].valueRank = -1; /* scalar */
+
+    UA_Argument outputArgument;
+    UA_Argument_init(&outputArgument);
+    outputArgument.description = UA_LOCALIZEDTEXT("en-US", "requestId");
+    outputArgument.name = UA_STRING("RequestId");
+    outputArgument.dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    outputArgument.valueRank = -1;
+
+    UA_MethodAttributes mAttr = UA_MethodAttributes_default;
+    mAttr.displayName = UA_LOCALIZEDTEXT("en-US","StartSigningRequest");
+    mAttr.executable = true;
+    mAttr.userExecutable = true;
+    UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(ns_index, 157),
+                            directoryTypeId,
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                            UA_QUALIFIEDNAME(ns_index, "StartSigningRequest"),
+                            mAttr, &generalMethodCallback,
+                            3, inputArguments, 1, &outputArgument, NULL, NULL);
+
+    UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 157),
+                           UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
+                           UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
+}
+
+static void
+addStartNewKeyPairRequestMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directoryTypeId) {
+    UA_Argument inputArguments[7];
+
+    UA_Argument_init(&inputArguments[0]);
+    inputArguments[0].description = UA_LOCALIZEDTEXT("en-US", "applicationId");
+    inputArguments[0].name = UA_STRING("ApplicationId");
+    inputArguments[0].dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    inputArguments[0].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&inputArguments[1]);
+    inputArguments[1].description = UA_LOCALIZEDTEXT("en-US", "certificateGroupId");
+    inputArguments[1].name = UA_STRING("CertificateGroupId");
+    inputArguments[1].dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    inputArguments[1].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&inputArguments[2]);
+    inputArguments[2].description = UA_LOCALIZEDTEXT("en-US", "certificateTypeId");
+    inputArguments[2].name = UA_STRING("CertificateTypeId");
+    inputArguments[2].dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    inputArguments[2].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&inputArguments[3]);
+    inputArguments[3].description = UA_LOCALIZEDTEXT("en-US", "subjectName");
+    inputArguments[3].name = UA_STRING("SubjectName");
+    inputArguments[3].dataType = UA_TYPES[UA_TYPES_STRING].typeId;
+    inputArguments[3].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&inputArguments[4]);
+    inputArguments[4].description = UA_LOCALIZEDTEXT("en-US", "domainNames");
+    inputArguments[4].name = UA_STRING("DomainNames");
+    inputArguments[4].dataType = UA_TYPES[UA_TYPES_STRING].typeId;
+    inputArguments[4].valueRank = 1;
+
+    UA_Argument_init(&inputArguments[5]);
+    inputArguments[5].description = UA_LOCALIZEDTEXT("en-US", "privateKeyFormat");
+    inputArguments[5].name = UA_STRING("privateKeyFormat");
+    inputArguments[5].dataType = UA_TYPES[UA_TYPES_STRING].typeId;
+    inputArguments[5].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&inputArguments[6]);
+    inputArguments[6].description = UA_LOCALIZEDTEXT("en-US", "privateKeyPassword");
+    inputArguments[6].name = UA_STRING("PrivateKeyPassword");
+    inputArguments[6].dataType = UA_TYPES[UA_TYPES_STRING].typeId;
+    inputArguments[6].valueRank = -1; /* scalar */
+
+    UA_Argument outputArgument;
+    UA_Argument_init(&outputArgument);
+    outputArgument.description = UA_LOCALIZEDTEXT("en-US", "requestId");
+    outputArgument.name = UA_STRING("RequestId");
+    outputArgument.dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    outputArgument.valueRank = -1;
+
+    UA_MethodAttributes mAttr = UA_MethodAttributes_default;
+    mAttr.displayName = UA_LOCALIZEDTEXT("en-US","StartNewKeyPairRequest");
+    mAttr.executable = true;
+    mAttr.userExecutable = true;
+    UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(ns_index, 154),
+                            directoryTypeId,
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                            UA_QUALIFIEDNAME(ns_index, "StartNewKeyPairRequest"),
+                            mAttr, &startNewKeyPairRequestMethodCallback,
+                            7, inputArguments, 1, &outputArgument, NULL, NULL);
+
+    UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 154),
+                           UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
+                           UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
+}
+
+static void
+addFinishRequestMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directoryTypeId) {
+    UA_Argument inputArguments[2];
+
+    UA_Argument_init(&inputArguments[0]);
+    inputArguments[0].description = UA_LOCALIZEDTEXT("en-US", "applicationId");
+    inputArguments[0].name = UA_STRING("ApplicationId");
+    inputArguments[0].dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    inputArguments[0].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&inputArguments[1]);
+    inputArguments[1].description = UA_LOCALIZEDTEXT("en-US", "requestId");
+    inputArguments[1].name = UA_STRING("RequestId");
+    inputArguments[1].dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    inputArguments[1].valueRank = -1; /* scalar */
+
+    UA_Argument outputArguments[3];
+
+    UA_Argument_init(&outputArguments[0]);
+    outputArguments[0].description = UA_LOCALIZEDTEXT("en-US", "certificate");
+    outputArguments[0].name = UA_STRING("Certificate");
+    outputArguments[0].dataType = UA_TYPES[UA_TYPES_BYTESTRING].typeId;
+    outputArguments[0].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&outputArguments[1]);
+    outputArguments[1].description = UA_LOCALIZEDTEXT("en-US", "privateKey");
+    outputArguments[1].name = UA_STRING("PrivateKey");
+    outputArguments[1].dataType = UA_TYPES[UA_TYPES_BYTESTRING].typeId;
+    outputArguments[1].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&outputArguments[2]);
+    outputArguments[2].description = UA_LOCALIZEDTEXT("en-US", "issuerCertificates");
+    outputArguments[2].name = UA_STRING("IssuerCertificates");
+    outputArguments[2].dataType = UA_TYPES[UA_TYPES_BYTESTRING].typeId;
+    outputArguments[2].valueRank = 1;
+
+    UA_MethodAttributes mAttr = UA_MethodAttributes_default;
+    mAttr.displayName = UA_LOCALIZEDTEXT("en-US","FinishRequest");
+    mAttr.executable = true;
+    mAttr.userExecutable = true;
+    UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(ns_index, 163),
+                            directoryTypeId,
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                            UA_QUALIFIEDNAME(ns_index, "FinishRequest"),
+                            mAttr, &generalMethodCallback,
+                            2, inputArguments, 3, outputArguments, NULL, NULL);
+
+    UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 163),
+                           UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
+                           UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
+}
+
+static void
+addGetCertificateGroupsMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directoryTypeId) {
+    UA_Argument inputArgument;
+    UA_Argument_init(&inputArgument);
+    inputArgument.description = UA_LOCALIZEDTEXT("en-US", "applicationId");
+    inputArgument.name = UA_STRING("ApplicationId");
+    inputArgument.dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    inputArgument.valueRank = -1; /* scalar */
+
+    UA_Argument outputArgument;
+    UA_Argument_init(&outputArgument);
+    outputArgument.description = UA_LOCALIZEDTEXT("en-US", "certificateGroupIds");
+    outputArgument.name = UA_STRING("CertificateGroupIds");
+    outputArgument.dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    outputArgument.valueRank = 1;
+
+    UA_MethodAttributes mAttr = UA_MethodAttributes_default;
+    mAttr.displayName = UA_LOCALIZEDTEXT("en-US","GetCertificateGroups");
+    mAttr.executable = true;
+    mAttr.userExecutable = true;
+    UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(ns_index, 508),
+                            directoryTypeId,
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                            UA_QUALIFIEDNAME(ns_index, "GetCertificateGroups"),
+                            mAttr, &getCertificateGroupsMethodCallback,
+                            1, &inputArgument, 1, &outputArgument, NULL, NULL);
+
+    UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 508),
+                           UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
+                           UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
+}
+
+static void
+addGetTrustListMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directoryTypeId) {
+    UA_Argument inputArguments[2];
+
+    UA_Argument_init(&inputArguments[0]);
+    inputArguments[0].description = UA_LOCALIZEDTEXT("en-US", "applicationId");
+    inputArguments[0].name = UA_STRING("ApplicationId");
+    inputArguments[0].dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    inputArguments[0].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&inputArguments[1]);
+    inputArguments[1].description = UA_LOCALIZEDTEXT("en-US", "certificateGroupId");
+    inputArguments[1].name = UA_STRING("CertificateGroupId");
+    inputArguments[1].dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    inputArguments[1].valueRank = -1; /* scalar */
+
+    UA_Argument outputArgument;
+    UA_Argument_init(&outputArgument);
+    outputArgument.description = UA_LOCALIZEDTEXT("en-US", "trustListId");
+    outputArgument.name = UA_STRING("TrustListId");
+    outputArgument.dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    outputArgument.valueRank = -1; /* scalar */
+
+    UA_MethodAttributes mAttr = UA_MethodAttributes_default;
+    mAttr.displayName = UA_LOCALIZEDTEXT("en-US","GetTrustList");
+    mAttr.executable = true;
+    mAttr.userExecutable = true;
+    UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(ns_index, 204),
+                            directoryTypeId,
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                            UA_QUALIFIEDNAME(ns_index, "GetTrustList"),
+                            mAttr, &findApplicationMethodCallback,
+                            2, inputArguments, 1, &outputArgument, NULL, NULL);
+
+    UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 204),
+                           UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
+                           UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
+}
+
+static void
+addGetCertificateStatus(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directoryTypeId){
+    UA_Argument inputArguments[3];
+
+    UA_Argument_init(&inputArguments[0]);
+    inputArguments[0].description = UA_LOCALIZEDTEXT("en-US", "applicationId");
+    inputArguments[0].name = UA_STRING("ApplicationId");
+    inputArguments[0].dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    inputArguments[0].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&inputArguments[1]);
+    inputArguments[1].description = UA_LOCALIZEDTEXT("en-US", "certificateGroupId");
+    inputArguments[1].name = UA_STRING("CertificateGroupId");
+    inputArguments[1].dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    inputArguments[1].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&inputArguments[2]);
+    inputArguments[2].description = UA_LOCALIZEDTEXT("en-US", "certificateTypeId");
+    inputArguments[2].name = UA_STRING("certificateTypeId");
+    inputArguments[2].dataType = UA_TYPES[UA_TYPES_NODEID].typeId;
+    inputArguments[2].valueRank = -1; /* scalar */
+
+    UA_Argument outputArgument;
+    UA_Argument_init(&outputArgument);
+    outputArgument.description = UA_LOCALIZEDTEXT("en-US", "UpdateRequired");
+    outputArgument.name = UA_STRING("UpdateRequired");
+    outputArgument.dataType = UA_TYPES[UA_TYPES_BOOLEAN].typeId;
+    outputArgument.valueRank = -1; /* scalar */
+
+    UA_MethodAttributes mAttr = UA_MethodAttributes_default;
+    mAttr.displayName = UA_LOCALIZEDTEXT("en-US","GetCertificateStatus");
+    mAttr.executable = true;
+    mAttr.userExecutable = true;
+    UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(ns_index, 225),
+                            directoryTypeId,
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                            UA_QUALIFIEDNAME(ns_index, "GetCertificateStatus"),
+                            mAttr, &generalMethodCallback,
+                            2, inputArguments, 1, &outputArgument, NULL, NULL);
+
+    UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 225),
+                           UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
+                           UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
+
+}
+
+/**********************************************/
+/*         RegistrationManager-Methods        */
+/**********************************************/
 
 static void
 addFindApplicationsMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directoryTypeId) {
@@ -75,7 +418,7 @@ addFindApplicationsMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId direc
     UA_Argument outputArgument;
     UA_Argument_init(&outputArgument);
     outputArgument.description = UA_LOCALIZEDTEXT("en-US", "ApplicationRecordDataType");
-    outputArgument.name = UA_STRING("MyOutput");
+    outputArgument.name = UA_STRING("OutputArguments");
     outputArgument.dataType = UA_TYPES[UA_TYPES_APPLICATIONRECORDDATATYPE].typeId;
     outputArgument.valueRank = 1;
 
@@ -127,7 +470,6 @@ addRegisterApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId di
                            UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
 }
 
-
 static void
 addUpdateApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directoryTypeId) {
     UA_Argument inputArgument;
@@ -170,7 +512,7 @@ addUnregisterApplicationMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId 
                             directoryTypeId,
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "UnregisterApplication"),
-                            mAttr, &generalMethodCallback,
+                            mAttr, &unregisterApplicationMethodCallback,
                             1, &inputArgument, 0, NULL, NULL, NULL);
 
     UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 149),
@@ -364,7 +706,13 @@ addQueryServersMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directory
                            UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
 }
 
-static void addDirectoryType(UA_Server *server, UA_UInt16 ns_index){
+
+/**********************************************/
+/*                 ObjectTypes                */
+/**********************************************/
+
+static void
+addDirectoryType(UA_Server *server, UA_UInt16 ns_index){
     UA_NodeId directoryTypeId = UA_NODEID_NUMERIC(ns_index, 13);
     UA_ObjectTypeAttributes dtAttr = UA_ObjectTypeAttributes_default;
     dtAttr.displayName = UA_LOCALIZEDTEXT("en-US", "DirectoryType");
@@ -404,7 +752,8 @@ static void addDirectoryType(UA_Server *server, UA_UInt16 ns_index){
     addQueryServersMethod(server, ns_index, directoryTypeId);
 }
 
-static void addCertificateDirectoryType(UA_Server *server, UA_UInt16 ns_index){
+static void
+addCertificateDirectoryType(UA_Server *server, UA_UInt16 ns_index){
     UA_NodeId certificateDirectoryTypeId = UA_NODEID_NUMERIC(ns_index, 63);
     UA_ObjectTypeAttributes dtAttr = UA_ObjectTypeAttributes_default;
     dtAttr.displayName = UA_LOCALIZEDTEXT("en-US", "CertificateDirectoryType");
@@ -429,6 +778,61 @@ static void addCertificateDirectoryType(UA_Server *server, UA_UInt16 ns_index){
 //                           UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
 //                           UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
 
+    addStartSigningRequestMethod(server, ns_index, certificateDirectoryTypeId);
+
+    addStartNewKeyPairRequestMethod(server, ns_index, certificateDirectoryTypeId);
+
+    addFinishRequestMethod(server, ns_index, certificateDirectoryTypeId);
+
+    addGetCertificateGroupsMethod(server, ns_index, certificateDirectoryTypeId);
+
+    addGetTrustListMethod(server, ns_index, certificateDirectoryTypeId);
+
+    addGetCertificateStatus(server, ns_index, certificateDirectoryTypeId);
+}
+
+static void
+createCertificateDirectoryObject(UA_Server *server, UA_UInt16 ns_index){
+
+    //Instantiation of CertificateDirectoryType
+    UA_ObjectAttributes directory = UA_ObjectAttributes_default;
+    directory.displayName = UA_LOCALIZEDTEXT("en-US", "Directory");
+    UA_Server_addObjectNode(server, UA_NODEID_NUMERIC(ns_index, 141),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+                            UA_QUALIFIEDNAME(ns_index, "Directory"),
+                            UA_NODEID_NUMERIC(ns_index, 63), /* this refers to the object type identifier */
+                            directory, NULL, NULL);
+
+    UA_NodeId certificateGroupsId = UA_NODEID_NUMERIC(ns_index, 614);
+    UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
+    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "CertificateGroups");
+    UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
+                            certificateGroupsId,
+                            UA_NODEID_NUMERIC(ns_index, 141),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+                            UA_QUALIFIEDNAME(ns_index, "CertificateGroups"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_CERTIFICATEGROUPFOLDERTYPE),
+                            (const UA_NodeAttributes*)&oAttr, &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],
+                            NULL, NULL);
+
+    UA_ObjectAttributes oAttr2 = UA_ObjectAttributes_default;
+    oAttr2.displayName = UA_LOCALIZEDTEXT("en-US", "DefaultApplicationGroup");
+    UA_Server_addObjectNode(server, UA_NODEID_NUMERIC(ns_index, 615),
+                            certificateGroupsId,
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                            UA_QUALIFIEDNAME(ns_index, "DefaultApplicationGroup"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_CERTIFICATEGROUPTYPE),
+                            oAttr2, NULL, NULL);
+
+   // UA_Server_addNode_finish(server, certificateGroupsId);
+   /* UA_Server_addObjectNode(server, certificateGroupsId,
+                            UA_NODEID_NUMERIC(ns_index, 141),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+                            UA_QUALIFIEDNAME(ns_index, "CertificateGroups"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_CERTIFICATEGROUPFOLDERTYPE),
+                            oAttr, NULL, NULL);
+*/
 }
 
 
@@ -441,26 +845,7 @@ UA_StatusCode UA_Server_InitGdsNamspace(UA_Server *server) {
     //Part12, page 31
     addCertificateDirectoryType(server, ns_index);
 
-    //Instantiation of CertificateDirectoryType
-    UA_ObjectAttributes directory = UA_ObjectAttributes_default;
-    directory.displayName = UA_LOCALIZEDTEXT("en-US", "Directory");
-    UA_Server_addObjectNode(server, UA_NODEID_NUMERIC(ns_index, 141),
-                            UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
-                            UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-                            UA_QUALIFIEDNAME(ns_index, "Directory"),
-                            UA_NODEID_NUMERIC(ns_index, 63), /* this refers to the object type identifier */
-                            directory, NULL, NULL);
-
-    //Regarding TODO not working
-    UA_NodeId certificateGroupsId = UA_NODEID_NUMERIC(ns_index, 614);
-    UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
-    oAttr.displayName = UA_LOCALIZEDTEXT("en-US", "CertificateGroups");
-    UA_Server_addObjectNode(server, certificateGroupsId,
-                            UA_NODEID_NUMERIC(ns_index, 141),
-                            UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-                            UA_QUALIFIEDNAME(ns_index, "CertificateGroups"),
-                            UA_NODEID_NUMERIC(0, UA_NS0ID_CERTIFICATEGROUPFOLDERTYPE),
-                            oAttr, NULL, NULL);
+    createCertificateDirectoryObject(server, ns_index);
 
     return UA_STATUSCODE_GOOD;
 }

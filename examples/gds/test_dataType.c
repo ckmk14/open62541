@@ -19,69 +19,23 @@ int main(int argc, char* argv[]) {
     signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
 
-
-//    signal(SIGINT, stopHandler);
-//    signal(SIGTERM, stopHandler);
-//
-//    if(argc < 3) {
-//        UA_LOG_FATAL(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-//                     "Missing arguments. Arguments are "
-//                             "<server-certificate.der> <private-key.der> "
-//                             "[<trustlist1.crl>, ...]");
-//        return 1;
-//    }
-//
-//    /* Load certificate and private key */
-//    UA_ByteString certificate = loadFile(argv[1]);
-//    UA_ByteString privateKey = loadFile(argv[2]);
-//
-//    /* Load the trustlist */
-//    size_t trustListSize = 0;
-//    if(argc > 3)
-//        trustListSize = (size_t)argc-3;
-//    UA_STACKARRAY(UA_ByteString, trustList, trustListSize);
-//    for(size_t i = 0; i < trustListSize; i++)
-//        trustList[i] = loadFile(argv[i+3]);
-//
-//    /* Loading of a revocation list currently unsupported */
-//    UA_ByteString *revocationList = NULL;
-//    size_t revocationListSize = 0;
-//
-//    UA_ServerConfig *config =
-//            UA_ServerConfig_new_basic256sha256(4840, &certificate, &privateKey,
-//                                               trustList, trustListSize,
-//                                               revocationList, revocationListSize);
-//    UA_ByteString_deleteMembers(&certificate);
-//    UA_ByteString_deleteMembers(&privateKey);
-//    for(size_t i = 0; i < trustListSize; i++)
-//        UA_ByteString_deleteMembers(&trustList[i]);
-//
-//    if(!config) {
-//        UA_LOG_FATAL(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-//                     "Could not create the server config");
-//        return 1;
-//    }
-
     UA_ServerConfig *config = UA_ServerConfig_new_minimal(4841, NULL);;
+
     config->applicationDescription.applicationType = UA_APPLICATIONTYPE_DISCOVERYSERVER;
     UA_String_deleteMembers(&config->applicationDescription.applicationUri);
     config->applicationDescription.applicationUri =
             UA_String_fromChars("urn:open62541.example.global_discovery_server");
-    // See http://www.opcfoundation.org/UA/schemas/1.03/ServerCapabilities.csv
+//    // See http://www.opcfoundation.org/UA/schemas/1.03/ServerCapabilities.csv
     config->serverCapabilitiesSize = 1;
     UA_String *caps = UA_String_new();
     *caps = UA_String_fromChars("GDS");
     config->serverCapabilities = caps;
-
-    //has to be put in config
-    UA_InitGDSRegistrationManager(&config->gds_rm);
 
     UA_Server *server = UA_Server_new(config);
 
     UA_Server_InitGdsNamspace(server);
 
     UA_StatusCode retval = UA_Server_run(server, &running);
-    UA_String_delete(caps);
     UA_Server_delete(server);
     UA_ServerConfig_delete(config);
     return (int)retval;
