@@ -27,6 +27,11 @@ GDS_StartNewKeyPairRequest(UA_Server *server,
                            UA_String *privateKeyFormat,
                            UA_String *privateKeyPassword);
 
+UA_StatusCode
+GDS_GetCertificateGroups(UA_Server *server,
+                     UA_NodeId *applicationId,
+                     size_t *outputSize,
+                     UA_NodeId **certificateGroupIds);
 
 
 #endif /* UA_ENABLE_GDS */

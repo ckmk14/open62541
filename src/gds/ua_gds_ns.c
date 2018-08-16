@@ -36,8 +36,15 @@ getCertificateGroupsMethodCallback(UA_Server *server,
                                    size_t inputSize, const UA_Variant *input,
                                    size_t outputSize, UA_Variant *output) {
 
-
-    return UA_STATUSCODE_GOOD;
+    size_t length = 0;
+    UA_NodeId *array;
+    UA_StatusCode retval =
+            GDS_GetCertificateGroups(server,(UA_NodeId*)input->data, &length,  &array);
+    if (length > 0){
+        UA_Variant_setArrayCopy(output, array, length, &UA_TYPES[UA_TYPES_NODEID]);
+        UA_free(array);
+    }
+    return retval;
 }
 
 

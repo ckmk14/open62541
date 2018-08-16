@@ -246,6 +246,7 @@ UA_StatusCode GDS_unregisterApplication(UA_Server *server,
             if(gds_rs->certificateGroupSize > 0)
                 UA_free(gds_rs->certificateGroups);
             UA_free(gds_rs);
+            server->gds_registeredServersSize--;
         }
     }
     return UA_STATUSCODE_GOOD;
@@ -260,6 +261,7 @@ void GDS_deleteMembers(UA_Server *rm) {
         if(gds_rs->certificateGroupSize > 0)
             UA_free(gds_rs->certificateGroups);
         UA_free(gds_rs);
+        rm->gds_registeredServersSize--;
     }
 }
 

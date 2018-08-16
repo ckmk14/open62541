@@ -75,7 +75,7 @@ static UA_StatusCode call_registerApplication(UA_Client *client,
     UA_Variant_deleteMembers(&input);
     return retval;
 }
-
+/*
 static UA_StatusCode call_unregisterApplication(UA_Client *client,
                                               UA_NodeId *newNodeId) {
     UA_Variant input;
@@ -87,6 +87,34 @@ static UA_StatusCode call_unregisterApplication(UA_Client *client,
     if(retval == UA_STATUSCODE_GOOD) {
         printf("4Method call was successful, and %lu returned values available.\n",
                (unsigned long)outputSize);
+
+        UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+    } else {
+        printf("Method call was unsuccessful, and %x returned values available.\n", retval);
+    }
+    UA_Variant_deleteMembers(&input);
+    return retval;
+}
+*/
+static UA_StatusCode call_getCertificateGroups(UA_Client *client,
+                                               UA_NodeId *newNodeId) {
+    UA_Variant input;
+    UA_Variant_setScalarCopy(&input, newNodeId, &UA_TYPES[UA_TYPES_NODEID]);
+    size_t outputSize;
+    UA_Variant *output;
+    UA_StatusCode  retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 141),
+                                           UA_NODEID_NUMERIC(2, 508), 1, &input, &outputSize, &output);
+    if(retval == UA_STATUSCODE_GOOD) {
+        printf("4Method call was successful, and %lu returned values available.\n",
+               (unsigned long)outputSize);
+
+        UA_NodeId *certificateGroups = (UA_NodeId*) output->data;
+        if (certificateGroups != NULL) {
+
+            //TODO copy records (unnecessary for now)
+      //      UA_ApplicationRecordDataType *record3 = (UA_ApplicationRecordDataType *) eo->content.decoded.data;
+      //      printf("%u", record3->applicationId.namespaceIndex);
+        }
 
         UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
     } else {
@@ -135,7 +163,7 @@ int main(int argc, char **argv) {
 
         call_registerApplication(client, &record, &nodeId);
     }
-
+    call_getCertificateGroups(client, &nodeId);
 
 //
 //    char *paths[3] = {"Directory", "CertificateGroups", "DefaultApplicationGroup"};
@@ -171,7 +199,10 @@ int main(int argc, char **argv) {
     // size_t length2 = 0;
     // UA_ApplicationRecordDataType * records2 = NULL;
    //  call_findApplication(client, config->applicationDescription.applicationUri, &length2, records2);
-     call_unregisterApplication(client, &nodeId);
+ //    call_unregisterApplication(client, &nodeId);
+
+
+
 
     UA_Client_disconnect(client);
     UA_Client_delete(client);
