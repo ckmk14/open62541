@@ -10,6 +10,7 @@
  *    Copyright 2018 (c) Fabian Arndt, Root-Core
  */
 
+#include <ua_plugin_ca.h>
 #include "ua_plugin_securitypolicy.h"
 #include "ua_config_default.h"
 #include "ua_client_config.h"
@@ -25,6 +26,9 @@
 #include "ua_securitypolicy_basic256sha256.h"
 #endif
 
+#ifdef UA_ENABLE_GDS
+#include "ua_ca_gnutls.h"
+#endif
 
 /* Struct initialization works across ANSI C/C99/C++ if it is done when the
  * variable is first declared. Assigning values to existing structs is
@@ -186,6 +190,19 @@ createSecurityPolicyBasic256Sha256Endpoint(UA_ServerConfig *const conf,
 
 #endif
 
+#ifdef UA_ENABLE_GDS
+static UA_StatusCode createDefaultCertificateGroup(UA_ServerConfig *conf){
+    conf->gds_certificateGroupSize = 1;
+    conf->gds_certificateGroups = (GDS_CertificateGroup *)UA_malloc(sizeof(GDS_CertificateGroup));
+    conf->gds_certificateGroups->certificateGroupId = UA_NODEID_NUMERIC(2, 615);
+    conf->gds_certificateGroups->ca = (GDS_CAPlugin *)UA_malloc(sizeof(GDS_CAPlugin));
+
+    UA_String name = UA_STRING("O=open62541,CN=GDS@localhost");
+    UA_InitCA(conf->gds_certificateGroups->ca, name, (60 * 60 * 24 * 365 * 10), 6000, 2048, conf->logger);
+    return UA_STATUSCODE_GOOD;
+}
+#endif
+
 const size_t usernamePasswordsSize = 2;
 UA_UsernamePasswordLogin usernamePasswords[2] = {
     {UA_STRING_STATIC("user1"), UA_STRING_STATIC("password")},
@@ -272,7 +289,9 @@ createDefaultConfig(void) {
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
     conf->maxEventsPerNode = 0; /* unlimited */
 #endif
-
+#ifdef UA_ENABLE_GDS
+    createDefaultCertificateGroup(conf);
+#endif
     /* Limits for MonitoredItems */
     conf->samplingIntervalLimits = UA_DURATIONRANGE(50.0, 24.0 * 3600.0 * 1000.0);
     conf->queueSizeLimits = UA_UINT32RANGE(1, 100);
@@ -653,6 +672,15 @@ UA_ServerConfig_delete(UA_ServerConfig *config) {
 
     /* Access Control */
     config->accessControl.deleteMembers(&config->accessControl);
+
+#ifdef UA_ENABLE_GDS
+    for(size_t i = 0; i < config->gds_certificateGroupSize; ++i) {
+        GDS_CAPlugin *ca = config->gds_certificateGroups[i].ca;
+        ca->deleteMembers(ca);
+        UA_free(ca);
+    }
+    UA_free(config->gds_certificateGroups);
+#endif
 
     UA_free(config);
 }

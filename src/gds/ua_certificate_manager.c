@@ -20,6 +20,7 @@ GDS_StartNewKeyPairRequest(UA_Server *server,
                            UA_String *domainNames,
                            UA_String *privateKeyFormat,
                            UA_String *privateKeyPassword) {
+    //server->config.gds_certificateGroups[0].ca;
     return UA_STATUSCODE_GOOD;
 }
 

@@ -7,6 +7,7 @@
 
 #include <src_generated/ua_types_generated.h>
 #include <ua_types.h>
+#include <ua_plugin_ca.h>
 #include "ua_gds_ns.h"
 #include "ua_registration_manager.h"
 #include "ua_certificate_manager.h"
@@ -24,7 +25,9 @@ startNewKeyPairRequestMethodCallback(UA_Server *server,
                                   const UA_NodeId *objectId, void *objectContext,
                                   size_t inputSize, const UA_Variant *input,
                                   size_t outputSize, UA_Variant *output) {
-   // GDS_StartNewKeyPairRequest(server, NULL, NULL);
+
+
+  //  GDS_StartNewKeyPairRequest(server, NULL, NULL);
     return UA_STATUSCODE_GOOD;
 }
 
@@ -35,15 +38,16 @@ getCertificateGroupsMethodCallback(UA_Server *server,
                                    const UA_NodeId *objectId, void *objectContext,
                                    size_t inputSize, const UA_Variant *input,
                                    size_t outputSize, UA_Variant *output) {
-
     size_t length = 0;
     UA_NodeId *array;
     UA_StatusCode retval =
             GDS_GetCertificateGroups(server,(UA_NodeId*)input->data, &length,  &array);
+
     if (length > 0){
         UA_Variant_setArrayCopy(output, array, length, &UA_TYPES[UA_TYPES_NODEID]);
         UA_free(array);
     }
+
     return retval;
 }
 
@@ -62,7 +66,6 @@ registerApplicationMethodCallback(UA_Server *server,
     printf("\nIn Method registerApplication\n");
 
     UA_NodeId applicationId;
-
     //The DefaultApplicationGroup is the default value for new applications
     UA_NodeId dag =  UA_NODEID_NUMERIC(2, 615);
     UA_StatusCode retval =
@@ -843,7 +846,7 @@ createCertificateDirectoryObject(UA_Server *server, UA_UInt16 ns_index){
 }
 
 
-UA_StatusCode UA_Server_InitGdsNamspace(UA_Server *server) {
+UA_StatusCode GDS_InitNamespace(UA_Server *server) {
     UA_UInt16 ns_index = UA_Server_addNamespace(server, "http://opcfoundation.org/UA/GDS/");
 
     //Part 12, page 14

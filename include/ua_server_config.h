@@ -27,6 +27,9 @@ extern "C" {
 #include "ua_plugin_pubsub.h"
 #endif
 
+#ifdef UA_ENABLE_GDS
+#include "ua_plugin_ca.h"
+#endif
 /**
  * .. _server-configuration:
  *
@@ -96,7 +99,10 @@ struct UA_ServerConfig {
     size_t pubsubTransportLayersSize;
     UA_PubSubTransportLayer *pubsubTransportLayers;
 #endif
-
+#ifdef UA_ENABLE_GDS
+    size_t gds_certificateGroupSize;
+    GDS_CertificateGroup *gds_certificateGroups;
+#endif
     /* Available endpoints */
     size_t endpointsSize;
     UA_Endpoint *endpoints;

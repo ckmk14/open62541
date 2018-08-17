@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
                                                revocationList, revocationListSize);
     UA_ByteString csr;
     memset(&csr, 0, sizeof(UA_ByteString));
-    UA_GDSCertificateGroup scg;
+    GDS_CAPlugin scg;
 
     UA_String name = UA_STRING("O=open62541,CN=GDS@localhost");
     UA_String name2 = UA_STRING("C=DE,O=open62541,CN=open62541@localhost");

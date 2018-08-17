@@ -110,8 +110,6 @@ static UA_StatusCode call_getCertificateGroups(UA_Client *client,
 
         UA_NodeId *certificateGroups = (UA_NodeId*) output->data;
         if (certificateGroups != NULL) {
-
-            //TODO copy records (unnecessary for now)
       //      UA_ApplicationRecordDataType *record3 = (UA_ApplicationRecordDataType *) eo->content.decoded.data;
       //      printf("%u", record3->applicationId.namespaceIndex);
         }
@@ -200,8 +198,6 @@ int main(int argc, char **argv) {
     // UA_ApplicationRecordDataType * records2 = NULL;
    //  call_findApplication(client, config->applicationDescription.applicationUri, &length2, records2);
  //    call_unregisterApplication(client, &nodeId);
-
-
 
 
     UA_Client_disconnect(client);

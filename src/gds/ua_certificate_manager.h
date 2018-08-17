@@ -16,6 +16,7 @@ extern "C" {
 
 #ifdef UA_ENABLE_GDS
 
+
 UA_StatusCode
 GDS_StartNewKeyPairRequest(UA_Server *server,
                            UA_NodeId *applicationId,

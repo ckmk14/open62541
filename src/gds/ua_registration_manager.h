@@ -17,23 +17,21 @@ extern "C" {
 
 #ifdef UA_ENABLE_GDS
 
-UA_StatusCode GDS_registerApplication(UA_Server *server,
-                                      UA_ApplicationRecordDataType *input,
-                                      size_t certificateGroupSize,
-                                      UA_NodeId *certificateGroupIds,
-                                      UA_NodeId *output);
 UA_StatusCode
-GDS_findApplication(UA_Server *server,
-                    UA_String *applicationUri,
-                    size_t *outputSize,
-                    UA_ApplicationRecordDataType **output);
+GDS_RegistrationManager_init(UA_Server *server);
 
 UA_StatusCode
-GDS_unregisterApplication(UA_Server *server,
-                          UA_NodeId *nodeId);
+GDS_registerApplication(UA_Server *server, UA_ApplicationRecordDataType *input,
+                        size_t certificateGroupSize, UA_NodeId *certificateGroupIds, UA_NodeId *output);
+UA_StatusCode
+GDS_findApplication(UA_Server *server, UA_String *applicationUri,
+                    size_t *outputSize, UA_ApplicationRecordDataType **output);
 
-void
-GDS_deleteMembers(UA_Server *rm);
+UA_StatusCode
+GDS_unregisterApplication(UA_Server *server, UA_NodeId *nodeId);
+
+UA_StatusCode
+GDS_RegistrationManager_close(UA_Server *rm);
 
 #endif /* UA_ENABLE_GDS */
 

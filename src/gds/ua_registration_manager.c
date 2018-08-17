@@ -24,14 +24,11 @@
     UA_String *serverCapabilities;
 */
 
-
 //TODO replacement for string localhost in discoveryurl
  // TODO malloc may fail: return a statuscode
-UA_StatusCode GDS_registerApplication(UA_Server *server,
-                                      UA_ApplicationRecordDataType *input,
-                                      size_t certificateGroupSize,
-                                      UA_NodeId *certificateGroupIds,
-                                      UA_NodeId *output) {
+UA_StatusCode
+ GDS_registerApplication(UA_Server *server, UA_ApplicationRecordDataType *input,
+                         size_t certificateGroupSize, UA_NodeId *certificateGroupIds, UA_NodeId *output) {
      size_t index = 0;
      gds_registeredServer_entry *newEntry = (gds_registeredServer_entry *)UA_malloc(sizeof(gds_registeredServer_entry));
      UA_ApplicationRecordDataType *record = &newEntry->gds_registeredServer;
@@ -207,10 +204,9 @@ error: //Can be probably replaced with UA_ApplicationRecordDataType_deleteMember
      return UA_STATUSCODE_BADINVALIDARGUMENT;
 }
 
-UA_StatusCode GDS_findApplication(UA_Server *server,
-                                     UA_String *applicationUri,
-                                     size_t *outputSize,
-                                     UA_ApplicationRecordDataType **output) {
+UA_StatusCode
+GDS_findApplication(UA_Server *server, UA_String *applicationUri,
+                    size_t *outputSize, UA_ApplicationRecordDataType **output) {
 
     /* Temporarily store all the pointers which we found to avoid reiterating
      * through the list */
@@ -236,8 +232,8 @@ UA_StatusCode GDS_findApplication(UA_Server *server,
     return UA_STATUSCODE_GOOD;
 }
 
-UA_StatusCode GDS_unregisterApplication(UA_Server *server,
-                                        UA_NodeId *nodeId) {
+UA_StatusCode
+GDS_unregisterApplication(UA_Server *server, UA_NodeId *nodeId) {
     gds_registeredServer_entry *gds_rs, *gds_rs_tmp;
     LIST_FOREACH_SAFE(gds_rs, &server->gds_registeredServers_list, pointers, gds_rs_tmp) {
         if(UA_NodeId_equal(&gds_rs->gds_registeredServer.applicationId, nodeId)) {
@@ -252,7 +248,8 @@ UA_StatusCode GDS_unregisterApplication(UA_Server *server,
     return UA_STATUSCODE_GOOD;
 }
 
-void GDS_deleteMembers(UA_Server *rm) {
+UA_StatusCode
+GDS_RegistrationManager_close(UA_Server *rm) {
     printf("\nIN\n");
     gds_registeredServer_entry *gds_rs, *gds_rs_tmp;
     LIST_FOREACH_SAFE(gds_rs, &rm->gds_registeredServers_list, pointers, gds_rs_tmp) {
@@ -263,6 +260,14 @@ void GDS_deleteMembers(UA_Server *rm) {
         UA_free(gds_rs);
         rm->gds_registeredServersSize--;
     }
+    return UA_STATUSCODE_GOOD;
+}
+
+UA_StatusCode
+GDS_RegistrationManager_init(UA_Server *server) {
+    LIST_INIT(&server->gds_registeredServers_list);
+    server->gds_registeredServersSize = 0;
+    return UA_STATUSCODE_GOOD;
 }
 
 #endif /* UA_ENABLE_GDS */

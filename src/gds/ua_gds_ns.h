@@ -20,7 +20,7 @@ extern "C" {
 
 #ifdef UA_ENABLE_GDS /* conditional compilation */
 
-UA_StatusCode UA_Server_InitGdsNamspace(UA_Server *server);
+UA_StatusCode GDS_InitNamespace(UA_Server *server);
 
 #endif
 

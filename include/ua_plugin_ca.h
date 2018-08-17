@@ -20,17 +20,17 @@ extern "C" {
  * A GDSCertificateGroup represents an interface to exactly one CA.
  * Currently only one plugin interface is implemented which uses GnuTLS.
  * */
-struct UA_GDSCertificateGroup;
-typedef struct UA_GDSCertificateGroup UA_GDSCertificateGroup;
+struct GDS_CAPlugin;
+typedef struct GDS_CAPlugin GDS_CAPlugin;
 
-struct UA_GDSCertificateGroup {
+struct GDS_CAPlugin {
     void *context;
     UA_Logger logger;
-    UA_StatusCode (*certificateSigningRequest)(UA_GDSCertificateGroup *cg,
+    UA_StatusCode (*certificateSigningRequest)(GDS_CAPlugin *cg,
                                                const UA_ByteString *csr,
                                                unsigned int supposedKeySize,
                                                UA_ByteString *const certificate);
-    UA_StatusCode (*createNewKeyPair) (UA_GDSCertificateGroup *scg,
+    UA_StatusCode (*createNewKeyPair) (GDS_CAPlugin *scg,
                                        UA_String subjectName,
                                        UA_String *privateKeyFormat,
                                        UA_String *privateKeyPassword,
@@ -43,8 +43,14 @@ struct UA_GDSCertificateGroup {
 
     UA_Boolean  (*isCertificatefromCA) (void *context, UA_ByteString certificate);
 
-    void (*deleteMembers)(UA_GDSCertificateGroup *cv);
+    void (*deleteMembers)(GDS_CAPlugin *cv);
 };
+
+
+typedef struct {
+    UA_NodeId certificateGroupId;
+    GDS_CAPlugin *ca;
+} GDS_CertificateGroup;
 
 #endif
 

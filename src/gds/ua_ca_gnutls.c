@@ -34,7 +34,7 @@ typedef struct {
 } CaContext;
 
 
-static void deleteMembers_gnutls(UA_GDSCertificateGroup *cg) {
+static void deleteMembers_gnutls(GDS_CAPlugin *cg) {
     if(cg == NULL)
         return;
 
@@ -51,7 +51,7 @@ static void deleteMembers_gnutls(UA_GDSCertificateGroup *cg) {
 }
 
 
-static UA_StatusCode generate_private_key(UA_GDSCertificateGroup *scg,
+static UA_StatusCode generate_private_key(GDS_CAPlugin *scg,
                                               gnutls_x509_privkey_t *privKey,
                                               unsigned int bits) {
 
@@ -65,18 +65,18 @@ static UA_StatusCode generate_private_key(UA_GDSCertificateGroup *scg,
 }
 
 
-//static void save_x509(gnutls_x509_crt_t crt, const char *loc) {
-//    gnutls_datum_t crtdata = {0};
-//    gnutls_x509_crt_export(crt, GNUTLS_X509_FMT_DER, NULL, (size_t*)&crtdata.size);
-//    crtdata.data = (unsigned char *) malloc(crtdata.size);
-//    gnutls_x509_crt_export(crt, GNUTLS_X509_FMT_DER, crtdata.data, (size_t*)&crtdata.size);
-//    FILE *f = fopen(loc, "w");
-//    fwrite(crtdata.data, crtdata.size, 1, f);
-//    fclose(f);
-//    free(crtdata.data);
-//}
+static void save_x509(gnutls_x509_crt_t crt, const char *loc) {
+    gnutls_datum_t crtdata = {0};
+    gnutls_x509_crt_export(crt, GNUTLS_X509_FMT_DER, NULL, (size_t*)&crtdata.size);
+    crtdata.data = (unsigned char *) malloc(crtdata.size);
+    gnutls_x509_crt_export(crt, GNUTLS_X509_FMT_DER, crtdata.data, (size_t*)&crtdata.size);
+    FILE *f = fopen(loc, "w");
+    fwrite(crtdata.data, crtdata.size, 1, f);
+    fclose(f);
+    free(crtdata.data);
+}
 
-static UA_StatusCode create_caContext(UA_GDSCertificateGroup *scg,
+static UA_StatusCode create_caContext(GDS_CAPlugin *scg,
                                       UA_String caName,
                                       unsigned int caDays,
                                       int serialNumber,
@@ -195,7 +195,7 @@ error:
 //Only for test purposes, this code will be necessary for the server side to generate a CSR
 //So this is useful code
 // TODO Error handling for CSR
-void UA_createCSR(UA_GDSCertificateGroup *scg, UA_ByteString *csr) {
+void UA_createCSR(GDS_CAPlugin *scg, UA_ByteString *csr) {
     gnutls_x509_crq_t crq;
     gnutls_x509_privkey_t key;
     unsigned char buffer[10 * 1024];
@@ -254,7 +254,7 @@ void UA_createCSR(UA_GDSCertificateGroup *scg, UA_ByteString *csr) {
 }
 
 
-static UA_StatusCode  setCommonCertificateFields(UA_GDSCertificateGroup *scg, gnutls_x509_crt_t *cert) {
+static UA_StatusCode  setCommonCertificateFields(GDS_CAPlugin *scg, gnutls_x509_crt_t *cert) {
     UA_StatusCode ret = UA_STATUSCODE_GOOD;
 
     int gnuErr = gnutls_x509_crt_set_version(*cert, 3);
@@ -290,7 +290,7 @@ static UA_StatusCode  setCommonCertificateFields(UA_GDSCertificateGroup *scg, gn
 
 
 //TODO csr_gnutls check key size within csr
-static UA_StatusCode csr_gnutls(UA_GDSCertificateGroup *scg,
+static UA_StatusCode csr_gnutls(GDS_CAPlugin *scg,
                          const UA_ByteString *certificateSigningRequest,
                          unsigned int supposedKeySize,
                          UA_ByteString *const certificate) {
@@ -410,7 +410,7 @@ static UA_StatusCode csr_gnutls(UA_GDSCertificateGroup *scg,
     certificate->data[buffer_size] = '\0';
     certificate->length--;
 
-  //  save_x509(cert, "/home/markus/app.der");
+    save_x509(cert, "/home/kocybi/app.der");
 deinit_csr:
     gnutls_x509_crq_deinit(crq);
     gnutls_x509_crt_deinit(cert);
@@ -423,7 +423,7 @@ deinit_csr:
 //example for pfx generation: https://www.gnutls.org/manual/gnutls.html#PKCS12-structure-generation-example
 //TODO DomainNames can be from different types (DNS, IPADDRESS, ....)
 //TODO Implement DomainNames
-static UA_StatusCode createNewKeyPair_gnutls (UA_GDSCertificateGroup *scg,
+static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
                                    UA_String subjectName,
                                    UA_String *privateKeyFormat,
                                    UA_String *privateKeyPassword,
@@ -534,7 +534,7 @@ static UA_StatusCode createNewKeyPair_gnutls (UA_GDSCertificateGroup *scg,
     certificate->data[buf_size] = '\0';
     certificate->length--;
 
- //   save_x509(cert, "/home/markus/app2.der");
+    save_x509(cert, "/home/kocybi/app2.der");
 
 deinit_create:
     gnutls_x509_crt_deinit(cert);
@@ -543,13 +543,13 @@ deinit_create:
 
 }
 
-UA_StatusCode UA_InitCA(UA_GDSCertificateGroup *scg,
+UA_StatusCode UA_InitCA(GDS_CAPlugin *scg,
                         UA_String caName,
                         unsigned int caDays,
                         int sn,
                         unsigned int caBitKeySize,
                         UA_Logger logger) {
-    memset(scg, 0, sizeof(UA_GDSCertificateGroup));
+    memset(scg, 0, sizeof(GDS_CAPlugin));
     scg->logger = logger;
     scg->certificateSigningRequest = csr_gnutls;
     scg->createNewKeyPair = createNewKeyPair_gnutls;

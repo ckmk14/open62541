@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <errno.h>
+#include <open62541.h>
 #include "open62541.h"
 #include "common.h"
 /** It follows the main server code, making use of the above definitions. */
@@ -31,11 +32,29 @@ int main(int argc, char* argv[]) {
     *caps = UA_String_fromChars("GDS");
     config->serverCapabilities = caps;
 
+    ///////////////////
+    UA_ByteString csr;
+    memset(&csr, 0, sizeof(UA_ByteString));
+
+  //  UA_String name = UA_STRING("O=open62541,CN=GDS@localhost");
+    UA_String name2 = UA_STRING("C=DE,O=open62541,CN=open62541@localhost");
+    UA_String name3 = UA_STRING("urn:unconfigured:application");
+  //  UA_InitCA(&scg, name, (60 * 60 * 24 * 365 * 10), 6000, 2048, config->logger);
+  //  UA_createCSR(&scg, &csr);
+
+    UA_ByteString cert2;
+    UA_ByteString passw;
+    memset(&passw, 0, sizeof(UA_ByteString));
+    GDS_CAPlugin *g = config->gds_certificateGroups[0].ca;
+    g->createNewKeyPair(g, name2, NULL, NULL, 2048, NULL, 0, name3, &cert2, &passw);
+    ///////////////////
     UA_Server *server = UA_Server_new(config);
 
-    UA_Server_InitGdsNamspace(server);
+    //GDS_InitNamespace(server);
 
     UA_StatusCode retval = UA_Server_run(server, &running);
+    UA_ByteString_deleteMembers(&cert2);
+    UA_ByteString_deleteMembers(&passw);
     UA_Server_delete(server);
     UA_ServerConfig_delete(config);
     return (int)retval;

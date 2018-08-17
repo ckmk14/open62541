@@ -30,6 +30,7 @@
 
 #ifdef UA_ENABLE_GDS
 #include "gds/ua_registration_manager.h"
+#include "ua_gds_ns.h"
 #endif
 
 /**********************/
@@ -153,7 +154,7 @@ void UA_Server_delete(UA_Server *server) {
 
 
 #ifdef UA_ENABLE_GDS
-    GDS_deleteMembers(server);
+    GDS_RegistrationManager_close(server);
 #endif
 
 #ifdef UA_ENABLE_DISCOVERY
@@ -301,11 +302,6 @@ UA_Server_new(const UA_ServerConfig *config) {
     UA_Server_addRepeatedCallback(server, (UA_ServerCallback)UA_Server_cleanup, NULL,
                                   10000, NULL);
 
-#ifdef UA_ENABLE_GDS
-    LIST_INIT(&server->gds_registeredServers_list);
-    server->gds_registeredServersSize = 0;
-#endif
-
     /* Initialized discovery database */
 #ifdef UA_ENABLE_DISCOVERY
     LIST_INIT(&server->registeredServers);
@@ -353,6 +349,12 @@ UA_Server_new(const UA_ServerConfig *config) {
 #ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL
     UA_Server_initPubSubNS0(server);
 #endif
+
+#ifdef UA_ENABLE_GDS
+    GDS_InitNamespace(server);
+    GDS_RegistrationManager_init(server);
+#endif
+
 
     return server;
 }
