@@ -6,6 +6,7 @@
 
 #include "ua_ca_gnutls.h"
 #include <gnutls/x509.h>
+#include <ua_types.h>
 
 #ifdef UA_ENABLE_GDS
 
@@ -254,7 +255,7 @@ void UA_createCSR(GDS_CAPlugin *scg, UA_ByteString *csr) {
 }
 
 
-static UA_StatusCode  setCommonCertificateFields(GDS_CAPlugin *scg, gnutls_x509_crt_t *cert) {
+static UA_StatusCode setCommonCertificateFields(GDS_CAPlugin *scg, gnutls_x509_crt_t *cert) {
     UA_StatusCode ret = UA_STATUSCODE_GOOD;
 
     int gnuErr = gnutls_x509_crt_set_version(*cert, 3);
@@ -418,24 +419,41 @@ deinit_csr:
     return ret;
 }
 
+
+
+
+//TODO insufficient detection - this has to be improved
+static
+gnutls_x509_subject_alt_name_t detectSubjectAltName(UA_String *name) {
+    char *str = (char *) name->data;
+
+    if (strncmp("urn:", str, 4) == 0)
+        return GNUTLS_SAN_URI;
+
+    struct sockaddr_in sa;
+    if (inet_pton(AF_INET, str, &(sa.sin_addr)))
+        return GNUTLS_SAN_IPADDRESS;
+
+    return GNUTLS_SAN_DNSNAME;
+}
+
 //TODO implement privateKey password
 //TODO implement pfx support for private key, right now only pem is supported (part12/p.34)
 //example for pfx generation: https://www.gnutls.org/manual/gnutls.html#PKCS12-structure-generation-example
-//TODO DomainNames can be from different types (DNS, IPADDRESS, ....)
-//TODO Implement DomainNames
 static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
-                                   UA_String subjectName,
+                                   UA_String *subjectName,
                                    UA_String *privateKeyFormat,
                                    UA_String *privateKeyPassword,
                                    unsigned  int keySize,
-                                   UA_ByteString *domainNamesArray,
                                    size_t domainNamesSize,
-                                   UA_String applicationUri,
+                                   UA_String *domainNamesArray,
+                                   UA_String *applicationUri,
                                    UA_ByteString *const certificate,
                                    UA_ByteString *const password) {
 
 
     UA_StatusCode ret = UA_STATUSCODE_GOOD;
+    UA_String subjectName_nullTerminated;
 
     if(scg == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
@@ -468,7 +486,14 @@ static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
     password->data[buf_size] = '\0';
     password->length--;
 
-    gnuErr = gnutls_x509_crt_set_dn(cert, (char *) subjectName.data, NULL);
+    //gnutls_x509_crt_set_dn requires null terminated string
+    subjectName_nullTerminated.length = subjectName->length + 1;
+    subjectName_nullTerminated.data = (UA_Byte *)
+            UA_calloc(subjectName_nullTerminated.length, sizeof(UA_Byte));
+    memcpy(subjectName_nullTerminated.data, subjectName->data, subjectName->length);
+    subjectName_nullTerminated.length--;
+
+    gnuErr = gnutls_x509_crt_set_dn(cert, (char *) subjectName_nullTerminated.data, NULL);
     UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
     if(ret != UA_STATUSCODE_GOOD)
         goto deinit_create;
@@ -510,15 +535,44 @@ static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
     if(ret != UA_STATUSCODE_GOOD)
         goto deinit_create;
 
-    gnuErr = gnutls_x509_crt_set_subject_alt_name (cert,
-                                                   GNUTLS_SAN_URI,
-                                                   applicationUri.data,
-                                                   (unsigned int)applicationUri.length,
-                                                   GNUTLS_FSAN_APPEND);
-    UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
-    if(ret != UA_STATUSCODE_GOOD)
-        goto deinit_create;
+    for (size_t i = 0; i < domainNamesSize; i++) {
 
+        UA_String san_nullTerminated;
+        san_nullTerminated.length = domainNamesArray[i].length + 1;
+        san_nullTerminated.data = (UA_Byte *)
+                UA_calloc(san_nullTerminated.length, sizeof(UA_Byte));
+        memcpy(san_nullTerminated.data, domainNamesArray[i].data, domainNamesArray[i].length);
+        san_nullTerminated.length--;
+
+        gnutls_x509_subject_alt_name_t san =
+                detectSubjectAltName(&san_nullTerminated);
+
+        if (san == GNUTLS_SAN_IPADDRESS){
+            struct sockaddr_in sa;
+            inet_pton(AF_INET, (char *) san_nullTerminated.data, &(sa.sin_addr));
+
+            gnuErr = gnutls_x509_crt_set_subject_alt_name (cert,
+                                                           san,
+                                                           &sa.sin_addr,
+                                                           sizeof(sa.sin_addr),
+                                                           GNUTLS_FSAN_APPEND);
+        }
+        else {
+
+            gnuErr = gnutls_x509_crt_set_subject_alt_name (cert,
+                                                           san,
+                                                           domainNamesArray[i].data,
+                                                           (unsigned int)domainNamesArray[i].length,
+                                                           GNUTLS_FSAN_APPEND);
+
+        }
+
+        UA_String_deleteMembers(&san_nullTerminated);
+
+        UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
+        if(ret != UA_STATUSCODE_GOOD)
+            goto deinit_create;
+    }
 
     gnuErr = gnutls_x509_crt_sign2(cert, cc->ca_crt, cc->ca_key, GNUTLS_DIG_SHA256, 0);
     UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
@@ -537,6 +591,9 @@ static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
     save_x509(cert, "/home/kocybi/app2.der");
 
 deinit_create:
+    if (!UA_String_equal(&subjectName_nullTerminated, &UA_STRING_NULL)) {
+        UA_String_deleteMembers(&subjectName_nullTerminated);
+    }
     gnutls_x509_crt_deinit(cert);
     gnutls_x509_privkey_deinit(privkey);
     return ret;

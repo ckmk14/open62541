@@ -10,6 +10,8 @@
 #ifdef UA_ENABLE_GDS
 
 
+
+
 UA_StatusCode
 GDS_StartNewKeyPairRequest(UA_Server *server,
                            UA_NodeId *applicationId,
@@ -19,9 +21,19 @@ GDS_StartNewKeyPairRequest(UA_Server *server,
                            size_t  domainNameSize,
                            UA_String *domainNames,
                            UA_String *privateKeyFormat,
-                           UA_String *privateKeyPassword) {
-    //server->config.gds_certificateGroups[0].ca;
-    return UA_STATUSCODE_GOOD;
+                           UA_String *privateKeyPassword,
+                           UA_NodeId *requestId) {
+    GDS_CAPlugin *ca = server->config.gds_certificateGroups[0].ca;
+
+    UA_ByteString cert;
+    UA_ByteString passw;
+
+    UA_String name3 = UA_STRING("urn:unconfigured:application");
+    ca->createNewKeyPair(ca, subjectName, NULL, NULL, 2048, domainNameSize, domainNames, &name3, &cert, &passw);
+
+    UA_ByteString_deleteMembers(&cert);
+    UA_ByteString_deleteMembers(&passw);
+    return UA_STATUSCODE_BADINVALIDARGUMENT;
 }
 
 UA_StatusCode
@@ -45,5 +57,14 @@ GDS_GetCertificateGroups(UA_Server *server, UA_NodeId *applicationId, size_t *ou
     return UA_STATUSCODE_GOOD;
 }
 
+UA_StatusCode
+GDS_CertificateManager_close(UA_Server *server){
+    return UA_STATUSCODE_GOOD;
+}
+
+UA_StatusCode
+GDS_CertificateManager_init(UA_Server *server) {
+    return UA_STATUSCODE_GOOD;
+}
 
 #endif /* UA_ENABLE_GDS */

@@ -75,6 +75,7 @@ static UA_StatusCode call_registerApplication(UA_Client *client,
     UA_Variant_deleteMembers(&input);
     return retval;
 }
+
 /*
 static UA_StatusCode call_unregisterApplication(UA_Client *client,
                                               UA_NodeId *newNodeId) {
@@ -163,6 +164,58 @@ int main(int argc, char **argv) {
     }
     call_getCertificateGroups(client, &nodeId);
 
+    UA_String name2 = UA_STRING("C=DE,O=open62541,CN=open62541@localhost");
+    UA_String name3 = UA_STRING("urn:unconfigured:application");
+    UA_String name4 = UA_STRING("192.168.0.1");
+    UA_String name5 = UA_STRING("ILT532-ubuntu");
+    UA_String tt[3] = {name3, name4, name5};
+    // UA_ByteString cert2;
+   // UA_ByteString passw;
+   // memset(&passw, 0, sizeof(UA_ByteString));
+   // GDS_CAPlugin *g = config->gds_certificateGroups[0].ca;
+   // g->createNewKeyPair(g, name2, NULL, NULL, 2048, 0, NULL, name3, &cert2, &passw);
+
+
+    UA_Variant input[7];
+    UA_Variant_setScalarCopy(&input[0], &nodeId, &UA_TYPES[UA_TYPES_NODEID]);
+    UA_Variant_setScalarCopy(&input[1], &UA_STRING_NULL, &UA_TYPES[UA_TYPES_NODEID]);
+    UA_Variant_setScalarCopy(&input[2], &UA_STRING_NULL, &UA_TYPES[UA_TYPES_NODEID]);
+    UA_Variant_setScalarCopy(&input[3], &name2, &UA_TYPES[UA_TYPES_STRING]);
+    UA_Variant_setArrayCopy(&input[4], &tt, 3, &UA_TYPES[UA_TYPES_STRING]);
+    UA_Variant_setScalarCopy(&input[5], &UA_STRING_NULL, &UA_TYPES[UA_TYPES_STRING]);
+    UA_Variant_setScalarCopy(&input[6], &UA_STRING_NULL, &UA_TYPES[UA_TYPES_STRING]);
+    size_t outputSize;
+    UA_Variant *output;
+    retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 141),
+                                           UA_NODEID_NUMERIC(2, 154), 7, input, &outputSize, &output);
+    if(retval == UA_STATUSCODE_GOOD) {
+        printf("Method call was successful, and %lu returned values available.\n",
+               (unsigned long)outputSize);
+
+     //   *newNodeId =  *((UA_NodeId*)output[0].data);
+     //   printf("%u\n", newNodeId->namespaceIndex);
+      //  UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+    } else {
+        printf("Method call was unsuccessful, and %x returned values available.\n", retval);
+    }
+
+
+    UA_Variant_deleteMembers(&input[0]);
+    UA_Variant_deleteMembers(&input[1]);
+    UA_Variant_deleteMembers(&input[2]);
+    UA_Variant_deleteMembers(&input[3]);
+    UA_Variant_deleteMembers(&input[4]);
+    UA_Variant_deleteMembers(&input[5]);
+    UA_Variant_deleteMembers(&input[6]);
+
+    UA_Client_disconnect(client);
+    UA_Client_delete(client);
+    UA_Server_delete(server);
+    UA_ServerConfig_delete(config);
+    return (int)retval;
+}
+
+
 //
 //    char *paths[3] = {"Directory", "CertificateGroups", "DefaultApplicationGroup"};
 //    UA_UInt32 ids[3] = {UA_NS0ID_ORGANIZES, UA_NS0ID_ORGANIZES, UA_NS0ID_HASCOMPONENT};
@@ -194,15 +247,7 @@ int main(int argc, char **argv) {
 //    UA_TranslateBrowsePathsToNodeIdsResponse response = UA_Client_Service_translateBrowsePathsToNodeIds(client, request);
 //    printf("%u",response.results[0].targets[0].targetId.nodeId.namespaceIndex);
 
-    // size_t length2 = 0;
-    // UA_ApplicationRecordDataType * records2 = NULL;
-   //  call_findApplication(client, config->applicationDescription.applicationUri, &length2, records2);
- //    call_unregisterApplication(client, &nodeId);
-
-
-    UA_Client_disconnect(client);
-    UA_Client_delete(client);
-    UA_Server_delete(server);
-    UA_ServerConfig_delete(config);
-    return (int)retval;
-}
+// size_t length2 = 0;
+// UA_ApplicationRecordDataType * records2 = NULL;
+//  call_findApplication(client, config->applicationDescription.applicationUri, &length2, records2);
+//    call_unregisterApplication(client, &nodeId);

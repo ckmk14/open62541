@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
 
     UA_ByteString passw;
     memset(&passw, 0, sizeof(UA_ByteString));
-    scg.createNewKeyPair(&scg, name2, NULL, NULL, 2048, NULL, 0, name3, &cert2, &passw);
+    scg.createNewKeyPair(&scg, &name2, NULL, NULL, 2048, 0, NULL, &name3, &cert2, &passw);
 
   //  save_x509(cert1, "/home/kocybi/app.der");
   //  save_x509(cert2, "/home/kocybi/app2.der");

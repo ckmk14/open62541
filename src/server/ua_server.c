@@ -29,8 +29,9 @@
 #endif
 
 #ifdef UA_ENABLE_GDS
-#include "gds/ua_registration_manager.h"
 #include "ua_gds_ns.h"
+#include "ua_registration_manager.h"
+#include "ua_certificate_manager.h"
 #endif
 
 /**********************/
@@ -155,6 +156,7 @@ void UA_Server_delete(UA_Server *server) {
 
 #ifdef UA_ENABLE_GDS
     GDS_RegistrationManager_close(server);
+    GDS_CertificateManager_close(server);
 #endif
 
 #ifdef UA_ENABLE_DISCOVERY
@@ -353,6 +355,7 @@ UA_Server_new(const UA_ServerConfig *config) {
 #ifdef UA_ENABLE_GDS
     GDS_InitNamespace(server);
     GDS_RegistrationManager_init(server);
+    GDS_CertificateManager_init(server);
 #endif
 
 

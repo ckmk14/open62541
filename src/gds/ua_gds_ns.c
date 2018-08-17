@@ -25,10 +25,21 @@ startNewKeyPairRequestMethodCallback(UA_Server *server,
                                   const UA_NodeId *objectId, void *objectContext,
                                   size_t inputSize, const UA_Variant *input,
                                   size_t outputSize, UA_Variant *output) {
+    UA_NodeId requestId;
+    UA_StatusCode retval = GDS_StartNewKeyPairRequest(server,
+                                                      (UA_NodeId *) input[0].data,
+                                                      (UA_NodeId *) input[1].data,
+                                                      (UA_NodeId *) input[2].data,
+                                                      (UA_String*) input[3].data,
+                                                      input[4].arrayLength,
+                                                      (UA_String*) input[4].data,
+                                                      (UA_String*) input[5].data,
+                                                      (UA_String*) input[6].data,
+                                                      &requestId);
 
-
-  //  GDS_StartNewKeyPairRequest(server, NULL, NULL);
-    return UA_STATUSCODE_GOOD;
+    if (retval == UA_STATUSCODE_GOOD)
+        UA_Variant_setScalarCopy(output, &requestId, &UA_TYPES[UA_TYPES_NODEID]);
+    return retval;
 }
 
 static UA_StatusCode

@@ -16,6 +16,8 @@ extern "C" {
 
 #ifdef UA_ENABLE_GDS
 
+UA_StatusCode
+GDS_CertificateManager_init(UA_Server *server);
 
 UA_StatusCode
 GDS_StartNewKeyPairRequest(UA_Server *server,
@@ -26,7 +28,8 @@ GDS_StartNewKeyPairRequest(UA_Server *server,
                            size_t  domainNameSize,
                            UA_String *domainNames,
                            UA_String *privateKeyFormat,
-                           UA_String *privateKeyPassword);
+                           UA_String *privateKeyPassword,
+                           UA_NodeId *requestId);
 
 UA_StatusCode
 GDS_GetCertificateGroups(UA_Server *server,
@@ -34,6 +37,8 @@ GDS_GetCertificateGroups(UA_Server *server,
                      size_t *outputSize,
                      UA_NodeId **certificateGroupIds);
 
+UA_StatusCode
+GDS_CertificateManager_close(UA_Server *server);
 
 #endif /* UA_ENABLE_GDS */
 

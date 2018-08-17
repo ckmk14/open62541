@@ -31,13 +31,13 @@ struct GDS_CAPlugin {
                                                unsigned int supposedKeySize,
                                                UA_ByteString *const certificate);
     UA_StatusCode (*createNewKeyPair) (GDS_CAPlugin *scg,
-                                       UA_String subjectName,
+                                       UA_String *subjectName,
                                        UA_String *privateKeyFormat,
                                        UA_String *privateKeyPassword,
                                        unsigned  int keySize,
-                                       UA_ByteString *domainNamesArray,
                                        size_t domainNamesSize,
-                                       UA_String applicationUri,
+                                       UA_String *domainNamesArray,
+                                       UA_String *applicationUri,
                                        UA_ByteString *const certificate,
                                        UA_ByteString *const password);
 
