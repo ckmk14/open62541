@@ -5,9 +5,6 @@
  */
 
 
-#include <src_generated/ua_types_generated.h>
-#include <ua_types.h>
-#include <ua_plugin_ca.h>
 #include "ua_gds_ns.h"
 #include "ua_registration_manager.h"
 #include "ua_certificate_manager.h"
@@ -24,7 +21,7 @@ startNewKeyPairRequestMethodCallback(UA_Server *server,
                                   const UA_NodeId *methodId, void *methodContext,
                                   const UA_NodeId *objectId, void *objectContext,
                                   size_t inputSize, const UA_Variant *input,
-                                  size_t outputSize, UA_Variant *output) {
+                                 size_t outputSize, UA_Variant *output) {
     UA_NodeId requestId;
     UA_StatusCode retval = GDS_StartNewKeyPairRequest(server,
                                                       (UA_NodeId *) input[0].data,
@@ -37,8 +34,10 @@ startNewKeyPairRequestMethodCallback(UA_Server *server,
                                                       (UA_String*) input[6].data,
                                                       &requestId);
 
+
     if (retval == UA_STATUSCODE_GOOD)
         UA_Variant_setScalarCopy(output, &requestId, &UA_TYPES[UA_TYPES_NODEID]);
+
     return retval;
 }
 

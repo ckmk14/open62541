@@ -169,12 +169,6 @@ int main(int argc, char **argv) {
     UA_String name4 = UA_STRING("192.168.0.1");
     UA_String name5 = UA_STRING("ILT532-ubuntu");
     UA_String tt[3] = {name3, name4, name5};
-    // UA_ByteString cert2;
-   // UA_ByteString passw;
-   // memset(&passw, 0, sizeof(UA_ByteString));
-   // GDS_CAPlugin *g = config->gds_certificateGroups[0].ca;
-   // g->createNewKeyPair(g, name2, NULL, NULL, 2048, 0, NULL, name3, &cert2, &passw);
-
 
     UA_Variant input[7];
     UA_Variant_setScalarCopy(&input[0], &nodeId, &UA_TYPES[UA_TYPES_NODEID]);
@@ -189,8 +183,7 @@ int main(int argc, char **argv) {
     retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 141),
                                            UA_NODEID_NUMERIC(2, 154), 7, input, &outputSize, &output);
     if(retval == UA_STATUSCODE_GOOD) {
-        printf("Method call was successful, and %lu returned values available.\n",
-               (unsigned long)outputSize);
+        printf("Method call was successful, and %lu returned values available.\n", (unsigned long)outputSize);
 
      //   *newNodeId =  *((UA_NodeId*)output[0].data);
      //   printf("%u\n", newNodeId->namespaceIndex);

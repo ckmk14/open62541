@@ -11,10 +11,26 @@
 extern "C" {
 #endif
 
-#include "ua_plugin_log.h"
-#include "server/ua_server_internal.h"
+#include "ua_util_internal.h"
+#include "ua_server.h"
+#include "ua_plugin_ca.h"
 
 #ifdef UA_ENABLE_GDS
+
+typedef struct gds_cm_entry {
+    LIST_ENTRY(gds_cm_entry) pointers;
+    UA_NodeId requestId;
+    UA_Boolean isApproved;
+    UA_ByteString certificate;
+    UA_ByteString privateKey;
+    size_t issuerCertificateSize;
+    UA_ByteString *issuerCertificates;
+} gds_cm_entry;
+
+typedef struct{
+    LIST_HEAD(gds_cm__list, gds_cm_entry) gds_cm_list;
+    size_t counter;
+} GDS_CertificateManager;
 
 UA_StatusCode
 GDS_CertificateManager_init(UA_Server *server);

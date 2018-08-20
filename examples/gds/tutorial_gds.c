@@ -8,12 +8,13 @@
 #include "common.h"
 #include <gnutls/x509.h>
 #include <open62541.h>
-
+/*
 UA_Boolean running = true;
 static void stopHandler(int sig) {
     UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "received ctrl-c");
     running = false;
 }
+ */
 //
 //static void save_x509(UA_ByteString crt, const char *loc) {
 //    FILE *f = fopen(loc, "w");
@@ -22,7 +23,8 @@ static void stopHandler(int sig) {
 //}
 
 int main(int argc, char* argv[]) {
-    signal(SIGINT, stopHandler);
+    return 0;}
+/*    signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
 
     if(argc < 3) {
@@ -33,11 +35,9 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    /* Load certificate and private key */
     UA_ByteString certificate = loadFile(argv[1]);
     UA_ByteString privateKey = loadFile(argv[2]);
 
-    /* Load the trustlist */
     size_t trustListSize = 0;
     if(argc > 3)
         trustListSize = (size_t)argc-3;
@@ -45,7 +45,6 @@ int main(int argc, char* argv[]) {
     for(size_t i = 0; i < trustListSize; i++)
         trustList[i] = loadFile(argv[i+3]);
 
-    /* Loading of a revocation list currently unsupported */
     UA_ByteString *revocationList = NULL;
     size_t revocationListSize = 0;
 
@@ -59,7 +58,7 @@ int main(int argc, char* argv[]) {
 
     UA_String name = UA_STRING("O=open62541,CN=GDS@localhost");
     UA_String name2 = UA_STRING("C=DE,O=open62541,CN=open62541@localhost");
-    UA_String name3 = UA_STRING("urn:unconfigured:application");
+   // UA_String name3 = UA_STRING("urn:unconfigured:application");
     UA_InitCA(&scg, name, (60 * 60 * 24 * 365 * 10), 6000, 2048, config->logger);
     UA_createCSR(&scg, &csr);
 
@@ -70,7 +69,7 @@ int main(int argc, char* argv[]) {
 
     UA_ByteString passw;
     memset(&passw, 0, sizeof(UA_ByteString));
-    scg.createNewKeyPair(&scg, &name2, NULL, NULL, 2048, 0, NULL, &name3, &cert2, &passw);
+    scg.createNewKeyPair(&scg, &name2, NULL, NULL, 2048, 0, NULL, &cert2, &passw);
 
   //  save_x509(cert1, "/home/kocybi/app.der");
   //  save_x509(cert2, "/home/kocybi/app2.der");
@@ -99,3 +98,4 @@ int main(int argc, char* argv[]) {
     UA_ServerConfig_delete(config);
     return (int)retval;
 }
+*/

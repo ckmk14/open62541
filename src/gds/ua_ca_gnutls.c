@@ -438,7 +438,7 @@ gnutls_x509_subject_alt_name_t detectSubjectAltName(UA_String *name) {
 }
 
 //TODO implement privateKey password
-//TODO implement pfx support for private key, right now only pem is supported (part12/p.34)
+//TODO implement pfx support for private key, right now only pem is implemented (part12/p.34)
 //example for pfx generation: https://www.gnutls.org/manual/gnutls.html#PKCS12-structure-generation-example
 static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
                                    UA_String *subjectName,
@@ -447,9 +447,10 @@ static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
                                    unsigned  int keySize,
                                    size_t domainNamesSize,
                                    UA_String *domainNamesArray,
-                                   UA_String *applicationUri,
                                    UA_ByteString *const certificate,
-                                   UA_ByteString *const password) {
+                                   UA_ByteString *const privateKey,
+                                   size_t *issuerCertificateSize,
+                                   UA_ByteString **issuerCertificates) {
 
 
     UA_StatusCode ret = UA_STATUSCODE_GOOD;
@@ -476,15 +477,15 @@ static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
 
     unsigned char buffer[10 * 1024];
     size_t buf_size = sizeof(buffer);
-    gnuErr = gnutls_x509_privkey_export(privkey, GNUTLS_X509_FMT_PEM, buffer, &buf_size);
+    gnuErr = gnutls_x509_privkey_export(privkey, GNUTLS_X509_FMT_DER, buffer, &buf_size);
     UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
     if(ret != UA_STATUSCODE_GOOD)
         goto deinit_create;
 
-    UA_ByteString_allocBuffer(password, buf_size + 1 );
-    memcpy(password->data, buffer, buf_size);
-    password->data[buf_size] = '\0';
-    password->length--;
+    UA_ByteString_allocBuffer(privateKey, buf_size + 1 );
+    memcpy(privateKey->data, buffer, buf_size);
+    privateKey->data[buf_size] = '\0';
+    privateKey->length--;
 
     //gnutls_x509_crt_set_dn requires null terminated string
     subjectName_nullTerminated.length = subjectName->length + 1;
@@ -589,6 +590,19 @@ static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
     certificate->length--;
 
     save_x509(cert, "/home/kocybi/app2.der");
+
+    //Export issuer certificate
+    *issuerCertificateSize = 1;
+    *issuerCertificates = (UA_ByteString *) UA_calloc(sizeof(UA_ByteString), *issuerCertificateSize);
+    memset(buffer, 0, sizeof(buffer));
+    buf_size = sizeof(buffer);
+    gnutls_x509_crt_export(cc->ca_crt, GNUTLS_X509_FMT_DER, buffer, &buf_size);
+    UA_ByteString_allocBuffer(*issuerCertificates, buf_size + 1);
+    memcpy((*issuerCertificates)[0].data, buffer, buf_size);
+    (*issuerCertificates)[0].data[buf_size] = '\0';
+    (*issuerCertificates)[0].length--;
+    save_x509(cc->ca_crt, "/home/kocybi/ca2.der");
+
 
 deinit_create:
     if (!UA_String_equal(&subjectName_nullTerminated, &UA_STRING_NULL)) {

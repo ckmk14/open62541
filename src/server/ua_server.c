@@ -358,7 +358,6 @@ UA_Server_new(const UA_ServerConfig *config) {
     GDS_CertificateManager_init(server);
 #endif
 
-
     return server;
 }
 

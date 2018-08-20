@@ -250,7 +250,6 @@ GDS_unregisterApplication(UA_Server *server, UA_NodeId *nodeId) {
 
 UA_StatusCode
 GDS_RegistrationManager_close(UA_Server *rm) {
-    printf("\nIN\n");
     gds_registeredServer_entry *gds_rs, *gds_rs_tmp;
     LIST_FOREACH_SAFE(gds_rs, &rm->gds_registeredServers_list, pointers, gds_rs_tmp) {
         LIST_REMOVE(gds_rs, pointers);

@@ -60,6 +60,8 @@ typedef struct UA_DispatchQueue UA_DispatchQueue;
 #endif /* UA_ENABLE_MULTITHREADING */
 
 #ifdef UA_ENABLE_GDS
+#include "gds/ua_certificate_manager.h"
+
 typedef struct gds_registeredServer_entry {
     LIST_ENTRY(gds_registeredServer_entry) pointers;
     UA_ApplicationRecordDataType gds_registeredServer;
@@ -127,6 +129,7 @@ struct UA_Server {
 #ifdef UA_ENABLE_GDS
     LIST_HEAD(gds_list, gds_registeredServer_entry) gds_registeredServers_list;
     size_t gds_registeredServersSize;
+    GDS_CertificateManager certificateManager;
 #endif
 
 #ifdef UA_ENABLE_DISCOVERY

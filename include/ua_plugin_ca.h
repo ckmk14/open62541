@@ -37,15 +37,15 @@ struct GDS_CAPlugin {
                                        unsigned  int keySize,
                                        size_t domainNamesSize,
                                        UA_String *domainNamesArray,
-                                       UA_String *applicationUri,
                                        UA_ByteString *const certificate,
-                                       UA_ByteString *const password);
+                                       UA_ByteString *const privateKey,
+                                       size_t *issuerCertificateSize,
+                                       UA_ByteString **issuerCertificates);
 
     UA_Boolean  (*isCertificatefromCA) (void *context, UA_ByteString certificate);
 
     void (*deleteMembers)(GDS_CAPlugin *cv);
 };
-
 
 typedef struct {
     UA_NodeId certificateGroupId;

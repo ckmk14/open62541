@@ -13,9 +13,7 @@ extern "C" {
 #endif
 
 
-#include "ua_types.h"
-#include "ua_plugin_log.h"
-#include "ua_log_stdout.h"
+
 #include "server/ua_server_internal.h"
 
 #ifdef UA_ENABLE_GDS /* conditional compilation */
