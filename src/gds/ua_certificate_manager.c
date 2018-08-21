@@ -4,6 +4,7 @@
  *    Copyright 2018 (c) Markus Karch, Fraunhofer IOSB
  */
 
+#include <ua_types.h>
 #include "ua_certificate_manager.h"
 #include "server/ua_server_internal.h"
 
@@ -35,10 +36,26 @@ GDS_StartNewKeyPairRequest(UA_Server *server,
                          &newEntry->issuerCertificateSize, &newEntry->issuerCertificates);
 
     if (retval == UA_STATUSCODE_GOOD){
-        *requestId = UA_NODEID_GUID(2, UA_Guid_random());
+        *requestId = newEntry->requestId = UA_NODEID_GUID(2, UA_Guid_random());
+        printf("RequestID: " UA_PRINTF_GUID_FORMAT "\n",
+               UA_PRINTF_GUID_DATA(requestId->identifier.guid));
+        newEntry->applicationId = *applicationId;
         newEntry->isApproved = UA_TRUE;
         LIST_INSERT_HEAD(&server->certificateManager.gds_cm_list, newEntry, pointers);
         server->certificateManager.counter++;
+/*
+        FILE *f = fopen("/home/kocybi/hope.der", "w");
+        fwrite(newEntry->certificate.data, newEntry->certificate.length, 1, f);
+        fclose(f);
+
+        FILE *f2 = fopen("/home/kocybi/hope2.der", "w");
+        fwrite(newEntry->privateKey.data, newEntry->privateKey.length, 1, f2);
+        fclose(f2);
+
+        FILE *f3 = fopen("/home/kocybi/hope3.der", "w");
+        fwrite(newEntry->issuerCertificates[0].data, newEntry->issuerCertificates[0].length, 1, f3);
+        fclose(f3);
+*/
     }
     else {
         if (!UA_ByteString_equal(&newEntry->certificate,&UA_BYTESTRING_NULL))
@@ -62,8 +79,51 @@ GDS_StartNewKeyPairRequest(UA_Server *server,
     return retval;
 }
 
+
 UA_StatusCode
-GDS_GetCertificateGroups(UA_Server *server, UA_NodeId *applicationId, size_t *outputSize, UA_NodeId **certificateGroupIds) {
+GDS_FinishRequest(UA_Server *server,
+                  UA_NodeId *applicationId,
+                  UA_NodeId *requestId,
+                  UA_ByteString *certificate,
+                  UA_ByteString *privKey,
+                  size_t *length,
+                  UA_ByteString **issuerCertificate) {
+    gds_cm_entry *entry, *entry_tmp;
+    LIST_FOREACH_SAFE(entry, &server->certificateManager.gds_cm_list, pointers, entry_tmp) {
+       if (UA_NodeId_equal(&entry->requestId, requestId)
+           && UA_NodeId_equal(&entry->applicationId, applicationId)
+           && entry->isApproved) {
+           UA_ByteString_allocBuffer(certificate, entry->certificate.length);
+           memcpy(certificate->data, entry->certificate.data, entry->certificate.length);
+
+           UA_ByteString_allocBuffer(privKey, entry->privateKey.length);
+           memcpy(privKey->data, entry->privateKey.data, entry->privateKey.length);
+
+           *length = entry->issuerCertificateSize;
+           size_t index = 0;
+           *issuerCertificate = (UA_ByteString *)
+                   UA_calloc (entry->issuerCertificateSize, sizeof(UA_ByteString));
+           while (index < entry->issuerCertificateSize) {
+               UA_ByteString_allocBuffer(issuerCertificate[index],
+                                         entry->issuerCertificates[index].length);
+               memcpy(issuerCertificate[index]->data,
+                      entry->issuerCertificates[index].data,
+                      entry->issuerCertificates[index].length);
+               index++;
+           }
+           return UA_STATUSCODE_GOOD;
+
+       }
+    }
+    return UA_STATUSCODE_BADINVALIDARGUMENT;
+}
+
+
+UA_StatusCode
+GDS_GetCertificateGroups(UA_Server *server,
+                         UA_NodeId *applicationId,
+                         size_t *outputSize,
+                         UA_NodeId **certificateGroupIds) {
     if (server->gds_registeredServersSize > 0) {
         gds_registeredServer_entry* current;
         LIST_FOREACH(current, &server->gds_registeredServers_list, pointers) {

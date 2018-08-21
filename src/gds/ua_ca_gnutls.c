@@ -447,8 +447,8 @@ static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
                                    unsigned  int keySize,
                                    size_t domainNamesSize,
                                    UA_String *domainNamesArray,
-                                   UA_ByteString *const certificate,
-                                   UA_ByteString *const privateKey,
+                                   UA_ByteString *certificate,
+                                   UA_ByteString *privateKey,
                                    size_t *issuerCertificateSize,
                                    UA_ByteString **issuerCertificates) {
 
@@ -470,13 +470,17 @@ static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
         return UA_STATUSCODE_BADOUTOFMEMORY;
     }
 
-    ret = generate_private_key(scg, &privkey, keySize);
+    gnutls_x509_privkey_init(&privkey);
+    gnuErr = gnutls_x509_privkey_generate(privkey, GNUTLS_PK_RSA, keySize, 0);
+    UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
     if (ret != UA_STATUSCODE_GOOD){
         return ret;
     }
 
+    //export privatekey
     unsigned char buffer[10 * 1024];
     size_t buf_size = sizeof(buffer);
+    memset(buffer, 0, buf_size);
     gnuErr = gnutls_x509_privkey_export(privkey, GNUTLS_X509_FMT_DER, buffer, &buf_size);
     UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
     if(ret != UA_STATUSCODE_GOOD)

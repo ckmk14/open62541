@@ -157,7 +157,8 @@ UA_StatusCode
      *output = record->applicationId;
      LIST_INSERT_HEAD(&server->gds_registeredServers_list, newEntry, pointers);
      server->gds_registeredServersSize++;
-
+     printf("New Application registered (NodeId): " UA_PRINTF_GUID_FORMAT "\n",
+            UA_PRINTF_GUID_DATA(record->applicationId.identifier.guid));
      return UA_STATUSCODE_GOOD;
 
 error: //Can be probably replaced with UA_ApplicationRecordDataType_deleteMembers

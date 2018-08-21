@@ -15,6 +15,44 @@
 /*         CertificateManager-Callbacks       */
 /**********************************************/
 
+
+static UA_StatusCode
+finishRequestMethodCallback(UA_Server *server,
+                                   const UA_NodeId *sessionId, void *sessionHandle,
+                                   const UA_NodeId *methodId, void *methodContext,
+                                   const UA_NodeId *objectId, void *objectContext,
+                                   size_t inputSize, const UA_Variant *input,
+                                   size_t outputSize, UA_Variant *output) {
+
+    UA_ByteString certificate;
+    UA_ByteString privateKey;
+    size_t issuerCertificateSize = 0;
+    UA_ByteString *issuerCertificates;
+    UA_StatusCode retval =
+            GDS_FinishRequest(server,
+                              (UA_NodeId *) input[0].data,
+                              (UA_NodeId *) input[1].data,
+                              &certificate, &privateKey, &issuerCertificateSize, &issuerCertificates);
+
+
+    if (retval == UA_STATUSCODE_GOOD){
+        UA_Variant_setScalarCopy(&output[0], &certificate, &UA_TYPES[UA_TYPES_BYTESTRING]);
+        UA_Variant_setScalarCopy(&output[1], &privateKey, &UA_TYPES[UA_TYPES_BYTESTRING]);
+        UA_Variant_setArrayCopy(&output[2], issuerCertificates, issuerCertificateSize, &UA_TYPES[UA_TYPES_BYTESTRING]);
+
+        UA_ByteString_deleteMembers(&certificate);
+        UA_ByteString_deleteMembers(&privateKey);
+        size_t index = 0;
+        while (index < issuerCertificateSize){
+            UA_ByteString_deleteMembers(&issuerCertificates[index]);
+            index++;
+        }
+        UA_free(issuerCertificates);
+    }
+
+    return retval;
+}
+
 static UA_StatusCode
 startNewKeyPairRequestMethodCallback(UA_Server *server,
                                   const UA_NodeId *sessionId, void *sessionHandle,
@@ -297,7 +335,7 @@ addFinishRequestMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId director
                             directoryTypeId,
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "FinishRequest"),
-                            mAttr, &generalMethodCallback,
+                            mAttr, &finishRequestMethodCallback,
                             2, inputArguments, 3, outputArguments, NULL, NULL);
 
     UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 163),

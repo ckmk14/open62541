@@ -20,6 +20,7 @@ extern "C" {
 typedef struct gds_cm_entry {
     LIST_ENTRY(gds_cm_entry) pointers;
     UA_NodeId requestId;
+    UA_NodeId applicationId;
     UA_Boolean isApproved;
     UA_ByteString certificate;
     UA_ByteString privateKey;
@@ -34,6 +35,15 @@ typedef struct{
 
 UA_StatusCode
 GDS_CertificateManager_init(UA_Server *server);
+
+UA_StatusCode
+GDS_FinishRequest(UA_Server *server,
+                  UA_NodeId *applicationId,
+                  UA_NodeId *requestId,
+                  UA_ByteString *certificate,
+                  UA_ByteString *privKey,
+                  size_t *length,
+                  UA_ByteString **issuerCertificate);
 
 UA_StatusCode
 GDS_StartNewKeyPairRequest(UA_Server *server,
