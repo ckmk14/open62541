@@ -34,7 +34,6 @@ finishRequestMethodCallback(UA_Server *server,
                               (UA_NodeId *) input[1].data,
                               &certificate, &privateKey, &issuerCertificateSize, &issuerCertificates);
 
-
     if (retval == UA_STATUSCODE_GOOD){
         UA_Variant_setScalarCopy(&output[0], &certificate, &UA_TYPES[UA_TYPES_BYTESTRING]);
         UA_Variant_setScalarCopy(&output[1], &privateKey, &UA_TYPES[UA_TYPES_BYTESTRING]);

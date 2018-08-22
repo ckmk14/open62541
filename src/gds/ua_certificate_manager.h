@@ -59,9 +59,9 @@ GDS_StartNewKeyPairRequest(UA_Server *server,
 
 UA_StatusCode
 GDS_GetCertificateGroups(UA_Server *server,
-                     UA_NodeId *applicationId,
-                     size_t *outputSize,
-                     UA_NodeId **certificateGroupIds);
+                         UA_NodeId *applicationId,
+                         size_t *outputSize,
+                         UA_NodeId **certificateGroupIds);
 
 UA_StatusCode
 GDS_CertificateManager_close(UA_Server *server);

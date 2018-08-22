@@ -161,47 +161,10 @@ UA_StatusCode
             UA_PRINTF_GUID_DATA(record->applicationId.identifier.guid));
      return UA_STATUSCODE_GOOD;
 
-error: //Can be probably replaced with UA_ApplicationRecordDataType_deleteMembers
-     UA_String_deleteMembers(&record->applicationUri);
-
-     if (record->applicationNames != NULL) {
-         index = 0;
-         while (index < record->applicationNamesSize) {
-             if (!UA_String_equal(&record->applicationNames[index].locale, &UA_STRING_NULL)) {
-                 UA_String_deleteMembers(&record->applicationNames[index].locale);
-             }
-             if (!UA_String_equal(&record->applicationNames[index].text, &UA_STRING_NULL)) {
-                 UA_String_deleteMembers(&record->applicationNames[index].text);
-             }index++;
-         }
-         UA_free(record->applicationNames);
-     }
-
-     UA_String_deleteMembers(&record->productUri);
-
-     if (record->discoveryUrls != NULL) {
-         index = 0;
-         while (index < record->discoveryUrlsSize) {
-             if (!UA_String_equal(&record->discoveryUrls[index], &UA_STRING_NULL)) {
-                 UA_String_deleteMembers(&record->discoveryUrls[index]);
-             }
-             index++;
-         }
-         UA_free(record->discoveryUrls);
-     }
-
-     if (record->serverCapabilities != NULL) {
-         index = 0;
-         while (index < record->serverCapabilitiesSize) {
-             if (!UA_String_equal(&record->serverCapabilities[index], &UA_STRING_NULL)) {
-                 UA_String_deleteMembers(&record->serverCapabilities[index]);
-             }
-             index++;
-         }
-         UA_free(record->serverCapabilities);
-     }
-
-     UA_free(record);
+error:
+     UA_ApplicationRecordDataType_deleteMembers(record);
+     UA_free(newEntry);
+     
      return UA_STATUSCODE_BADINVALIDARGUMENT;
 }
 

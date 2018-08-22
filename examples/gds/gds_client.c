@@ -108,6 +108,7 @@ static UA_StatusCode call_unregisterApplication(UA_Client *client,
     return retval;
 }
 */
+/*
 static
 UA_StatusCode call_getCertificateGroups(UA_Client *client,
                                                UA_NodeId *applicationId) {
@@ -170,7 +171,8 @@ UA_StatusCode call_startNewKeyPairRequest(UA_Client *client,
 
     return retval;
 }
-
+*/
+/*
 static
 UA_StatusCode call_finishRequest(UA_Client *client,
                                  UA_NodeId *applicationId,
@@ -200,22 +202,22 @@ UA_StatusCode call_finishRequest(UA_Client *client,
         memcpy(issuerCertificate[0].data, issuer[0].data, issuer->length);
 
 
-/*
-        UA_ByteString *certificate = (UA_ByteString *) output[0].data;
-        FILE *f = fopen("/home/kocybi/aaa.der", "w");
-        fwrite(certificate->data, certificate->length, 1, f);
-        fclose(f);
 
-        UA_ByteString *priv = (UA_ByteString *) output[1].data;
-        FILE *f2 = fopen("/home/kocybi/aaa2.der", "w");
-        fwrite(priv->data, priv->length, 1, f2);
-        fclose(f2);
+//        UA_ByteString *certificate = (UA_ByteString *) output[0].data;
+//        FILE *f = fopen("/home/kocybi/aaa.der", "w");
+//        fwrite(certificate->data, certificate->length, 1, f);
+//        fclose(f);
+//
+//        UA_ByteString *priv = (UA_ByteString *) output[1].data;
+//        FILE *f2 = fopen("/home/kocybi/aaa2.der", "w");
+//        fwrite(priv->data, priv->length, 1, f2);
+//        fclose(f2);
+//
+//        UA_ByteString *issuer = (UA_ByteString *) output[2].data;
+//        FILE *f3 = fopen("/home/kocybi/aaa3.der", "w");
+//        fwrite(issuer[0].data, issuer[0].length, 1, f3);
+//        fclose(f3);
 
-        UA_ByteString *issuer = (UA_ByteString *) output[2].data;
-        FILE *f3 = fopen("/home/kocybi/aaa3.der", "w");
-        fwrite(issuer[0].data, issuer[0].length, 1, f3);
-        fclose(f3);
-*/
         UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
     } else {
         printf("Method call was unsuccessful, and %x returned values available.\n", retval);
@@ -227,7 +229,7 @@ UA_StatusCode call_finishRequest(UA_Client *client,
     return retval;
 
 }
-
+*/
 
 int main(int argc, char **argv) {
     signal(SIGINT, stopHandler); /* catches ctrl-c */
@@ -256,6 +258,21 @@ int main(int argc, char **argv) {
         UA_ApplicationRecordDataType record;
         UA_ApplicationRecordDataType_init(&record);
         record.applicationUri = config->applicationDescription.applicationUri;
+        record.applicationType = UA_APPLICATIONTYPE_SERVER;
+        record.productUri = UA_STRING("urn:open62541.example.server_register");
+        record.applicationNamesSize++;
+        UA_LocalizedText applicationName = UA_LOCALIZEDTEXT("en-US", "open62541_Server");
+        record.applicationNames = &applicationName;
+        record.discoveryUrlsSize++;
+        UA_String discoveryUrl = UA_STRING("opc.tcp://localhost:4840");
+        record.discoveryUrls = &discoveryUrl;
+        record.serverCapabilitiesSize++;
+        UA_String serverCap = UA_STRING("LDS");
+        record.serverCapabilities = &serverCap;
+
+        call_registerApplication(client, &record, &appId);
+
+   /*
         record.applicationType = UA_APPLICATIONTYPE_SERVER;
         record.productUri = UA_STRING("urn:open62541.example.server_register");
         record.applicationNamesSize++;
@@ -308,6 +325,7 @@ int main(int argc, char **argv) {
         UA_ByteString_deleteMembers(&certificate);
         UA_ByteString_deleteMembers(&privateKey);
         UA_ByteString_deleteMembers(&issuerCertificate);
+        */
     }
 
     UA_Client_disconnect(client);
