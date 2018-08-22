@@ -20,6 +20,24 @@ static void stopHandler(int sign) {
     running = false;
 }
 
+/*
+static UA_StatusCode call_unregisterApplication(UA_Client *client,
+                                                UA_NodeId *newNodeId) {
+    UA_Variant input;
+    UA_Variant_setScalarCopy(&input, newNodeId, &UA_TYPES[UA_TYPES_NODEID]);
+    size_t outputSize;
+    UA_Variant *output;
+    UA_StatusCode  retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 141),
+                                      UA_NODEID_NUMERIC(2, 149), 1, &input, &outputSize, &output);
+    if(retval == UA_STATUSCODE_GOOD) {
+        UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+    } else {
+        printf("Method call was unsuccessful, and %x returned values available.\n", retval);
+    }
+    UA_Variant_deleteMembers(&input);
+    return retval;
+}
+*/
 
 static UA_StatusCode call_findApplication(UA_Client *client,
                                           UA_String uri,
@@ -34,14 +52,11 @@ static UA_StatusCode call_findApplication(UA_Client *client,
     if(retval == UA_STATUSCODE_GOOD) {
         UA_ExtensionObject *eo = (UA_ExtensionObject*) output->data;
         if (eo != NULL) {
-            printf("URI already registered\n");
-            *length = 1;
+            *length = output->arrayLength;
             //TODO copy records (unnecessary for now)
-            UA_ApplicationRecordDataType *record3 = (UA_ApplicationRecordDataType *) eo->content.decoded.data;
-            printf("%u", record3->applicationId.namespaceIndex);
+       //     UA_ApplicationRecordDataType *record3 = (UA_ApplicationRecordDataType *) eo->content.decoded.data;
         }
         else {
-            printf("URI is not assigned yet\n");
             *length = 0;
         }
         UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
@@ -63,9 +78,6 @@ static UA_StatusCode call_registerApplication(UA_Client *client,
     UA_StatusCode  retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 141),
                             UA_NODEID_NUMERIC(2, 146), 1, &input, &outputSize, &output);
     if(retval == UA_STATUSCODE_GOOD) {
-        printf("Method call was successful, and %lu returned values available.\n",
-               (unsigned long)outputSize);
-
         *newNodeId =  *((UA_NodeId*)output[0].data);
         printf("ApplicationID: " UA_PRINTF_GUID_FORMAT "\n",
                UA_PRINTF_GUID_DATA(newNodeId->identifier.guid));
@@ -73,13 +85,14 @@ static UA_StatusCode call_registerApplication(UA_Client *client,
     } else {
         printf("Method call was unsuccessful, and %x returned values available.\n", retval);
     }
+
     UA_Variant_deleteMembers(&input);
     return retval;
 }
 
 /*
 static UA_StatusCode call_unregisterApplication(UA_Client *client,
-                                              UA_NodeId *newNodeId) {
+                                                UA_NodeId *newNodeId) {
     UA_Variant input;
     UA_Variant_setScalarCopy(&input, newNodeId, &UA_TYPES[UA_TYPES_NODEID]);
     size_t outputSize;
@@ -87,9 +100,6 @@ static UA_StatusCode call_unregisterApplication(UA_Client *client,
     UA_StatusCode  retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 141),
                                       UA_NODEID_NUMERIC(2, 149), 1, &input, &outputSize, &output);
     if(retval == UA_STATUSCODE_GOOD) {
-        printf("4Method call was successful, and %lu returned values available.\n",
-               (unsigned long)outputSize);
-
         UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
     } else {
         printf("Method call was unsuccessful, and %x returned values available.\n", retval);
@@ -98,7 +108,8 @@ static UA_StatusCode call_unregisterApplication(UA_Client *client,
     return retval;
 }
 */
-static UA_StatusCode call_getCertificateGroups(UA_Client *client,
+static
+UA_StatusCode call_getCertificateGroups(UA_Client *client,
                                                UA_NodeId *applicationId) {
     UA_Variant input;
     UA_Variant_setScalarCopy(&input, applicationId, &UA_TYPES[UA_TYPES_NODEID]);
@@ -107,13 +118,10 @@ static UA_StatusCode call_getCertificateGroups(UA_Client *client,
     UA_StatusCode  retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 141),
                                            UA_NODEID_NUMERIC(2, 508), 1, &input, &outputSize, &output);
     if(retval == UA_STATUSCODE_GOOD) {
-        printf("4Method call was successful, and %lu returned values available.\n",
-               (unsigned long)outputSize);
-
         UA_NodeId *certificateGroups = (UA_NodeId*) output->data;
         if (certificateGroups != NULL) {
-      //      UA_ApplicationRecordDataType *record3 = (UA_ApplicationRecordDataType *) eo->content.decoded.data;
-      //      printf("%u", record3->applicationId.namespaceIndex);
+            printf("CertificateGroupID: NS:%u;Value=%u\n",
+                   certificateGroups->namespaceIndex, certificateGroups->identifier.numeric);
         }
 
         UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
@@ -124,30 +132,31 @@ static UA_StatusCode call_getCertificateGroups(UA_Client *client,
     return retval;
 }
 
-static UA_StatusCode call_startNewKeyPairRequest(UA_Client *client,
+static
+UA_StatusCode call_startNewKeyPairRequest(UA_Client *client,
                                                  UA_NodeId *applicationId,
+                                                 const UA_NodeId *certificateGroupId,
+                                                 const UA_NodeId *certificateTypeId,
+                                                 UA_String *subjectName,
+                                                 size_t domainNameLength,
+                                                 UA_String *domainNames,
+                                                 const UA_String *privateKeyFormat,
+                                                 const UA_String *privateKeyPassword,
                                                  UA_NodeId *requestId) {
-
-    UA_String name2 = UA_STRING("C=DE,O=open62541,CN=open62541@localhost");
-    UA_String name3 = UA_STRING("urn:unconfigured:application");
-    UA_String name4 = UA_STRING("192.168.0.1");
-    UA_String name5 = UA_STRING("ILT532-ubuntu");
-    UA_String tt[3] = {name3, name4, name5};
-
     UA_Variant input[7];
+
     UA_Variant_setScalarCopy(&input[0], applicationId, &UA_TYPES[UA_TYPES_NODEID]);
-    UA_Variant_setScalarCopy(&input[1], &UA_STRING_NULL, &UA_TYPES[UA_TYPES_NODEID]);
-    UA_Variant_setScalarCopy(&input[2], &UA_STRING_NULL, &UA_TYPES[UA_TYPES_NODEID]);
-    UA_Variant_setScalarCopy(&input[3], &name2, &UA_TYPES[UA_TYPES_STRING]);
-    UA_Variant_setArrayCopy(&input[4], &tt, 3, &UA_TYPES[UA_TYPES_STRING]);
-    UA_Variant_setScalarCopy(&input[5], &UA_STRING_NULL, &UA_TYPES[UA_TYPES_STRING]);
-    UA_Variant_setScalarCopy(&input[6], &UA_STRING_NULL, &UA_TYPES[UA_TYPES_STRING]);
+    UA_Variant_setScalarCopy(&input[1], certificateGroupId, &UA_TYPES[UA_TYPES_NODEID]);
+    UA_Variant_setScalarCopy(&input[2], certificateTypeId, &UA_TYPES[UA_TYPES_NODEID]);
+    UA_Variant_setScalarCopy(&input[3], subjectName, &UA_TYPES[UA_TYPES_STRING]);
+    UA_Variant_setArrayCopy(&input[4], domainNames, 3, &UA_TYPES[UA_TYPES_STRING]);
+    UA_Variant_setScalarCopy(&input[5], privateKeyFormat, &UA_TYPES[UA_TYPES_STRING]);
+    UA_Variant_setScalarCopy(&input[6], privateKeyPassword, &UA_TYPES[UA_TYPES_STRING]);
     size_t outputSize;
     UA_Variant *output;
     UA_StatusCode retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 141),
                             UA_NODEID_NUMERIC(2, 154), 7, input, &outputSize, &output);
     if(retval == UA_STATUSCODE_GOOD) {
-        printf("Method call was successful, and %lu returned values available.\n", (unsigned long)outputSize);
         *requestId =  *((UA_NodeId*)output[0].data);
         printf("RequestID: " UA_PRINTF_GUID_FORMAT "\n",
                UA_PRINTF_GUID_DATA(requestId->identifier.guid));
@@ -162,6 +171,62 @@ static UA_StatusCode call_startNewKeyPairRequest(UA_Client *client,
     return retval;
 }
 
+static
+UA_StatusCode call_finishRequest(UA_Client *client,
+                                 UA_NodeId *applicationId,
+                                 UA_NodeId *requestId,
+                                 UA_ByteString *certificate,
+                                 UA_ByteString *privateKey,
+                                 UA_ByteString *issuerCertificate) {
+
+    UA_Variant input[2];
+    UA_Variant_setScalarCopy(&input[0], applicationId, &UA_TYPES[UA_TYPES_NODEID]);
+    UA_Variant_setScalarCopy(&input[1], requestId, &UA_TYPES[UA_TYPES_NODEID]);
+    size_t outputSize;
+    UA_Variant *output;
+    UA_StatusCode retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 141),
+                            UA_NODEID_NUMERIC(2, 163), 2, input, &outputSize, &output);
+    if(retval == UA_STATUSCODE_GOOD) {
+        UA_ByteString *cert = (UA_ByteString *) output[0].data;
+        UA_ByteString_allocBuffer(certificate, cert->length);
+        memcpy(certificate->data, cert->data, cert->length);
+
+        UA_ByteString *privKey = (UA_ByteString *) output[1].data;
+        UA_ByteString_allocBuffer(privateKey, privKey->length);
+        memcpy(privateKey->data, privKey->data, privKey->length);
+
+        UA_ByteString *issuer = (UA_ByteString *) output[2].data;
+        UA_ByteString_allocBuffer(issuerCertificate, issuer->length);
+        memcpy(issuerCertificate[0].data, issuer[0].data, issuer->length);
+
+
+/*
+        UA_ByteString *certificate = (UA_ByteString *) output[0].data;
+        FILE *f = fopen("/home/kocybi/aaa.der", "w");
+        fwrite(certificate->data, certificate->length, 1, f);
+        fclose(f);
+
+        UA_ByteString *priv = (UA_ByteString *) output[1].data;
+        FILE *f2 = fopen("/home/kocybi/aaa2.der", "w");
+        fwrite(priv->data, priv->length, 1, f2);
+        fclose(f2);
+
+        UA_ByteString *issuer = (UA_ByteString *) output[2].data;
+        FILE *f3 = fopen("/home/kocybi/aaa3.der", "w");
+        fwrite(issuer[0].data, issuer[0].length, 1, f3);
+        fclose(f3);
+*/
+        UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+    } else {
+        printf("Method call was unsuccessful, and %x returned values available.\n", retval);
+    }
+
+    for(size_t i = 0; i < 2; i++)
+        UA_Variant_deleteMembers(&input[i]);
+
+    return retval;
+
+}
 
 
 int main(int argc, char **argv) {
@@ -181,8 +246,12 @@ int main(int argc, char **argv) {
     }
     size_t length = 0;
     UA_ApplicationRecordDataType * records = NULL;
+
+    //Every ApplicationURI shall be unique.
+    // Therefore the client should be sure that the application is not registered yet.
     call_findApplication(client, config->applicationDescription.applicationUri, &length, records);
     UA_NodeId appId = UA_NODEID_NULL;
+
     if (!length){
         UA_ApplicationRecordDataType record;
         UA_ApplicationRecordDataType_init(&record);
@@ -200,45 +269,46 @@ int main(int argc, char **argv) {
         record.serverCapabilities = &serverCap;
 
         call_registerApplication(client, &record, &appId);
-    }
-    call_getCertificateGroups(client, &appId);
 
-    UA_NodeId requestID;
-    call_startNewKeyPairRequest(client,&appId,&requestID);
+        call_findApplication(client, config->applicationDescription.applicationUri, &length, records);
+
+        call_getCertificateGroups(client, &appId);
+
+        UA_NodeId requestId;
+
+        UA_String subjectName = UA_STRING("C=DE,O=open62541,CN=open62541@localhost");
+        UA_String appURI = UA_STRING("urn:unconfigured:application");
+        UA_String ipAddress = UA_STRING("192.168.0.1");
+        UA_String dnsName = UA_STRING("ILT532-ubuntu");
+        UA_String domainNames[3] = {appURI, ipAddress, dnsName};
 
 
-    UA_Variant input[2];
-    UA_Variant_setScalarCopy(&input[0], &appId, &UA_TYPES[UA_TYPES_NODEID]);
-    UA_Variant_setScalarCopy(&input[1], &requestID, &UA_TYPES[UA_TYPES_NODEID]);
-    size_t outputSize;
-    UA_Variant *output;
-    retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 141),
-                                          UA_NODEID_NUMERIC(2, 163), 2, input, &outputSize, &output);
-    if(retval == UA_STATUSCODE_GOOD) {
-        printf("Method call was successful, and %lu returned values available.\n", (unsigned long)outputSize);
+        call_startNewKeyPairRequest(client, &appId, &UA_NODEID_NULL, &UA_NODEID_NULL,
+                                    &subjectName, 3, domainNames,
+                                    &UA_STRING_NULL,&UA_STRING_NULL, &requestId);
 
-        UA_ByteString *certificate = (UA_ByteString *) output[0].data;
+        UA_ByteString certificate;
+        UA_ByteString privateKey;
+        UA_ByteString issuerCertificate;
+
+        call_finishRequest(client, &appId, &requestId, &certificate, &privateKey, &issuerCertificate);
+
         FILE *f = fopen("/home/kocybi/aaa.der", "w");
-        fwrite(certificate->data, certificate->length, 1, f);
+        fwrite(certificate.data, certificate.length, 1, f);
         fclose(f);
 
-        UA_ByteString *priv = (UA_ByteString *) output[1].data;
         FILE *f2 = fopen("/home/kocybi/aaa2.der", "w");
-        fwrite(priv->data, priv->length, 1, f2);
+        fwrite(privateKey.data, privateKey.length, 1, f2);
         fclose(f2);
 
-        UA_ByteString *issuer = (UA_ByteString *) output[2].data;
         FILE *f3 = fopen("/home/kocybi/aaa3.der", "w");
-        fwrite(issuer[0].data, issuer[0].length, 1, f3);
+        fwrite(issuerCertificate.data, issuerCertificate.length, 1, f3);
         fclose(f3);
 
-        UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
-    } else {
-        printf("Method call was unsuccessful, and %x returned values available.\n", retval);
+        UA_ByteString_deleteMembers(&certificate);
+        UA_ByteString_deleteMembers(&privateKey);
+        UA_ByteString_deleteMembers(&issuerCertificate);
     }
-
-    for(size_t i = 0; i < 2; i++)
-        UA_Variant_deleteMembers(&input[i]);;
 
     UA_Client_disconnect(client);
     UA_Client_delete(client);
