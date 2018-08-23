@@ -10,6 +10,26 @@
 
 #ifdef UA_ENABLE_GDS
 
+static
+void delete_CertificateManager_entry(gds_cm_entry *newEntry){
+    if (!UA_ByteString_equal(&newEntry->certificate, &UA_BYTESTRING_NULL))
+        UA_ByteString_deleteMembers(&newEntry->certificate);
+
+    if (!UA_ByteString_equal(&newEntry->privateKey, &UA_BYTESTRING_NULL))
+        UA_ByteString_deleteMembers(&newEntry->privateKey);
+
+    if (newEntry->issuerCertificateSize > 0){
+        size_t index = 0;
+        while (index < newEntry->issuerCertificateSize){
+            if (!UA_ByteString_equal(&newEntry->issuerCertificates[index],&UA_BYTESTRING_NULL))
+                UA_ByteString_deleteMembers(&newEntry->issuerCertificates[index]);
+            index++;
+        }
+        UA_ByteString_delete(newEntry->issuerCertificates);
+    }
+
+    UA_free(newEntry);
+}
 
 UA_StatusCode
 GDS_StartNewKeyPairRequest(UA_Server *server,
@@ -58,23 +78,7 @@ GDS_StartNewKeyPairRequest(UA_Server *server,
 */
     }
     else {
-        if (!UA_ByteString_equal(&newEntry->certificate,&UA_BYTESTRING_NULL))
-            UA_ByteString_deleteMembers(&newEntry->certificate);
-
-        if (!UA_ByteString_equal(&newEntry->privateKey,&UA_BYTESTRING_NULL))
-            UA_ByteString_deleteMembers(&newEntry->privateKey);
-
-        if (newEntry->issuerCertificateSize > 0){
-            size_t index = 0;
-            while (index < newEntry->issuerCertificateSize){
-                if (!UA_ByteString_equal(&newEntry->issuerCertificates[index],&UA_BYTESTRING_NULL))
-                    UA_ByteString_deleteMembers(&newEntry->issuerCertificates[index]);
-                index++;
-            }
-            UA_ByteString_delete(newEntry->issuerCertificates);
-        }
-
-        UA_free(newEntry);
+        delete_CertificateManager_entry(newEntry);
     }
     return retval;
 }
@@ -107,23 +111,7 @@ GDS_StartSigningRequest(UA_Server *server,
         server->certificateManager.counter++;
     }
     else {
-        if (!UA_ByteString_equal(&newEntry->certificate, &UA_BYTESTRING_NULL))
-            UA_ByteString_deleteMembers(&newEntry->certificate);
-
-        if (!UA_ByteString_equal(&newEntry->privateKey, &UA_BYTESTRING_NULL))
-            UA_ByteString_deleteMembers(&newEntry->privateKey);
-
-        if (newEntry->issuerCertificateSize > 0){
-            size_t index = 0;
-            while (index < newEntry->issuerCertificateSize){
-                if (!UA_ByteString_equal(&newEntry->issuerCertificates[index],&UA_BYTESTRING_NULL))
-                    UA_ByteString_deleteMembers(&newEntry->issuerCertificates[index]);
-                index++;
-            }
-            UA_ByteString_delete(newEntry->issuerCertificates);
-        }
-
-        UA_free(newEntry);
+        delete_CertificateManager_entry(newEntry);
     };
 
     return retval;
