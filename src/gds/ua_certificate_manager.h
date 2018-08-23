@@ -58,6 +58,14 @@ GDS_StartNewKeyPairRequest(UA_Server *server,
                            UA_NodeId *requestId);
 
 UA_StatusCode
+GDS_StartSigningRequest(UA_Server *server,
+                        UA_NodeId *applicationId,
+                        UA_NodeId *certificateGroupId,
+                        UA_NodeId *certificateTypeId,
+                        UA_ByteString *certificateRequest,
+                        UA_NodeId *requestId);
+
+UA_StatusCode
 GDS_GetCertificateGroups(UA_Server *server,
                          UA_NodeId *applicationId,
                          size_t *outputSize,

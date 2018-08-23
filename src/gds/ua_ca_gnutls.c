@@ -292,9 +292,11 @@ static UA_StatusCode setCommonCertificateFields(GDS_CAPlugin *scg, gnutls_x509_c
 
 //TODO csr_gnutls check key size within csr
 static UA_StatusCode csr_gnutls(GDS_CAPlugin *scg,
-                         const UA_ByteString *certificateSigningRequest,
-                         unsigned int supposedKeySize,
-                         UA_ByteString *const certificate) {
+                                unsigned int supposedKeySize,
+                                UA_ByteString *certificateSigningRequest,
+                                UA_ByteString *certificate,
+                                size_t *issuerCertificateSize,
+                                UA_ByteString **issuerCertificates) {
 
     UA_StatusCode ret = UA_STATUSCODE_GOOD;
 
@@ -355,7 +357,6 @@ static UA_StatusCode csr_gnutls(GDS_CAPlugin *scg,
     if (ret != UA_STATUSCODE_GOOD)
         goto deinit_csr;
 
-
     unsigned char buf[20]; // SHA-1 with 20 bytes
     size_t size = sizeof(buf);
     gnuErr = gnutls_x509_crq_get_key_id(crq, 0, buf, &size );
@@ -411,7 +412,19 @@ static UA_StatusCode csr_gnutls(GDS_CAPlugin *scg,
     certificate->data[buffer_size] = '\0';
     certificate->length--;
 
-    save_x509(cert, "/home/kocybi/app.der");
+
+    //Export issuer certificate
+    *issuerCertificateSize = 1;
+    *issuerCertificates = (UA_ByteString *) UA_calloc(sizeof(UA_ByteString), *issuerCertificateSize);
+    memset(buffer, 0, sizeof(buffer));
+    buffer_size = sizeof(buffer);
+    gnutls_x509_crt_export(cc->ca_crt, GNUTLS_X509_FMT_DER, buffer, &buffer_size);
+    UA_ByteString_allocBuffer(*issuerCertificates, buffer_size + 1);
+    memcpy((*issuerCertificates)[0].data, buffer, buffer_size);
+    (*issuerCertificates)[0].data[buffer_size] = '\0';
+    (*issuerCertificates)[0].length--;
+
+    save_x509(cert, "/home/kocybi/app123.der");
 deinit_csr:
     gnutls_x509_crq_deinit(crq);
     gnutls_x509_crt_deinit(cert);
@@ -470,8 +483,7 @@ static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
         return UA_STATUSCODE_BADOUTOFMEMORY;
     }
 
-    gnutls_x509_privkey_init(&privkey);
-    gnuErr = gnutls_x509_privkey_generate(privkey, GNUTLS_PK_RSA, keySize, 0);
+    ret = generate_private_key(scg, &privkey, keySize);
     UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
     if (ret != UA_STATUSCODE_GOOD){
         return ret;
@@ -541,7 +553,6 @@ static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
         goto deinit_create;
 
     for (size_t i = 0; i < domainNamesSize; i++) {
-
         UA_String san_nullTerminated;
         san_nullTerminated.length = domainNamesArray[i].length + 1;
         san_nullTerminated.data = (UA_Byte *)
@@ -593,7 +604,7 @@ static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
     certificate->data[buf_size] = '\0';
     certificate->length--;
 
-    save_x509(cert, "/home/kocybi/app2.der");
+  //  save_x509(cert, "/home/kocybi/app2.der");
 
     //Export issuer certificate
     *issuerCertificateSize = 1;
@@ -605,7 +616,7 @@ static UA_StatusCode createNewKeyPair_gnutls (GDS_CAPlugin *scg,
     memcpy((*issuerCertificates)[0].data, buffer, buf_size);
     (*issuerCertificates)[0].data[buf_size] = '\0';
     (*issuerCertificates)[0].length--;
-    save_x509(cc->ca_crt, "/home/kocybi/ca2.der");
+  //  save_x509(cc->ca_crt, "/home/kocybi/ca2.der");
 
 
 deinit_create:

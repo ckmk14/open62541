@@ -26,10 +26,7 @@ typedef struct GDS_CAPlugin GDS_CAPlugin;
 struct GDS_CAPlugin {
     void *context;
     UA_Logger logger;
-    UA_StatusCode (*certificateSigningRequest)(GDS_CAPlugin *cg,
-                                               const UA_ByteString *csr,
-                                               unsigned int supposedKeySize,
-                                               UA_ByteString *const certificate);
+
     UA_StatusCode (*createNewKeyPair) (GDS_CAPlugin *scg,
                                        UA_String *subjectName,
                                        UA_String *privateKeyFormat,
@@ -41,6 +38,13 @@ struct GDS_CAPlugin {
                                        UA_ByteString *const privateKey,
                                        size_t *issuerCertificateSize,
                                        UA_ByteString **issuerCertificates);
+
+    UA_StatusCode (*certificateSigningRequest) (GDS_CAPlugin *scg,
+                                                unsigned int supposedKeySize,
+                                                UA_ByteString *certificateSigningRequest,
+                                                UA_ByteString *certificate,
+                                                size_t *issuerCertificateSize,
+                                                UA_ByteString **issuerCertificates);
 
     UA_Boolean  (*isCertificatefromCA) (void *context, UA_ByteString certificate);
 

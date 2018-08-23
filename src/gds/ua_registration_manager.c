@@ -164,7 +164,7 @@ UA_StatusCode
 error:
      UA_ApplicationRecordDataType_deleteMembers(record);
      UA_free(newEntry);
-     
+
      return UA_STATUSCODE_BADINVALIDARGUMENT;
 }
 

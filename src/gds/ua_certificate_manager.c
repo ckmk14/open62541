@@ -79,6 +79,56 @@ GDS_StartNewKeyPairRequest(UA_Server *server,
     return retval;
 }
 
+UA_StatusCode
+GDS_StartSigningRequest(UA_Server *server,
+                        UA_NodeId *applicationId,
+                        UA_NodeId *certificateGroupId,
+                        UA_NodeId *certificateTypeId,
+                        UA_ByteString *certificateRequest,
+                        UA_NodeId *requestId){
+
+    GDS_CAPlugin *ca = server->config.gds_certificateGroups[0].ca;
+
+    gds_cm_entry *newEntry = (gds_cm_entry *)UA_calloc(1, sizeof(gds_cm_entry));
+
+    UA_StatusCode retval = ca->certificateSigningRequest(ca, 0, certificateRequest,
+                                  &newEntry->certificate,
+                                  &newEntry->issuerCertificateSize,
+                                  &newEntry->issuerCertificates);
+
+    if (retval == UA_STATUSCODE_GOOD){
+        *requestId = newEntry->requestId = UA_NODEID_GUID(2, UA_Guid_random());
+        printf("RequestID: " UA_PRINTF_GUID_FORMAT "\n",
+               UA_PRINTF_GUID_DATA(requestId->identifier.guid));
+        newEntry->applicationId = *applicationId;
+        newEntry->isApproved = UA_TRUE;
+        newEntry->privateKey = UA_BYTESTRING_NULL;
+        LIST_INSERT_HEAD(&server->certificateManager.gds_cm_list, newEntry, pointers);
+        server->certificateManager.counter++;
+    }
+    else {
+        if (!UA_ByteString_equal(&newEntry->certificate, &UA_BYTESTRING_NULL))
+            UA_ByteString_deleteMembers(&newEntry->certificate);
+
+        if (!UA_ByteString_equal(&newEntry->privateKey, &UA_BYTESTRING_NULL))
+            UA_ByteString_deleteMembers(&newEntry->privateKey);
+
+        if (newEntry->issuerCertificateSize > 0){
+            size_t index = 0;
+            while (index < newEntry->issuerCertificateSize){
+                if (!UA_ByteString_equal(&newEntry->issuerCertificates[index],&UA_BYTESTRING_NULL))
+                    UA_ByteString_deleteMembers(&newEntry->issuerCertificates[index]);
+                index++;
+            }
+            UA_ByteString_delete(newEntry->issuerCertificates);
+        }
+
+        UA_free(newEntry);
+    };
+
+    return retval;
+}
+
 
 UA_StatusCode
 GDS_FinishRequest(UA_Server *server,
@@ -96,8 +146,10 @@ GDS_FinishRequest(UA_Server *server,
            UA_ByteString_allocBuffer(certificate, entry->certificate.length);
            memcpy(certificate->data, entry->certificate.data, entry->certificate.length);
 
-           UA_ByteString_allocBuffer(privKey, entry->privateKey.length);
-           memcpy(privKey->data, entry->privateKey.data, entry->privateKey.length);
+           if (!UA_ByteString_equal(&entry->privateKey, &UA_BYTESTRING_NULL)) {
+               UA_ByteString_allocBuffer(privKey, entry->privateKey.length);
+               memcpy(privKey->data, entry->privateKey.data, entry->privateKey.length);
+           }
 
            *length = entry->issuerCertificateSize;
            size_t index = 0;

@@ -37,6 +37,38 @@ static UA_StatusCode call_unregisterApplication(UA_Client *client,
     UA_Variant_deleteMembers(&input);
     return retval;
 }
+
+static
+UA_StatusCode call_startSigningRequest(UA_Client *client,
+                                          UA_NodeId *applicationId,
+                                          const UA_NodeId *certificateGroupId,
+                                          const UA_NodeId *certificateTypeId,
+                                          UA_ByteString *csr,
+                                          UA_NodeId *requestId) {
+    UA_Variant input[4];
+
+    UA_Variant_setScalarCopy(&input[0], applicationId, &UA_TYPES[UA_TYPES_NODEID]);
+    UA_Variant_setScalarCopy(&input[1], certificateGroupId, &UA_TYPES[UA_TYPES_NODEID]);
+    UA_Variant_setScalarCopy(&input[2], certificateTypeId, &UA_TYPES[UA_TYPES_NODEID]);
+    UA_Variant_setScalarCopy(&input[3], csr, &UA_TYPES[UA_TYPES_BYTESTRING]);
+    size_t outputSize;
+    UA_Variant *output;
+    UA_StatusCode  retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 141),
+                            UA_NODEID_NUMERIC(2, 157), 4, input, &outputSize, &output);
+    if(retval == UA_STATUSCODE_GOOD) {
+        *requestId =  *((UA_NodeId*)output[0].data);
+        printf("RequestID: " UA_PRINTF_GUID_FORMAT "\n",
+               UA_PRINTF_GUID_DATA(requestId->identifier.guid));
+        UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+    } else {
+        printf("Method call was unsuccessful, and %x returned values available.\n", retval);
+    }
+
+    for(size_t i = 0; i < 4; i++)
+        UA_Variant_deleteMembers(&input[i]);;
+
+    return retval;
+}
 */
 
 static UA_StatusCode call_findApplication(UA_Client *client,
@@ -91,24 +123,39 @@ static UA_StatusCode call_registerApplication(UA_Client *client,
 }
 
 /*
-static UA_StatusCode call_unregisterApplication(UA_Client *client,
-                                                UA_NodeId *newNodeId) {
-    UA_Variant input;
-    UA_Variant_setScalarCopy(&input, newNodeId, &UA_TYPES[UA_TYPES_NODEID]);
+static
+UA_StatusCode call_startSigningRequest(UA_Client *client,
+                                          UA_NodeId *applicationId,
+                                          const UA_NodeId *certificateGroupId,
+                                          const UA_NodeId *certificateTypeId,
+                                          UA_ByteString *csr,
+                                          UA_NodeId *requestId) {
+    UA_Variant input[4];
+
+    UA_Variant_setScalarCopy(&input[0], applicationId, &UA_TYPES[UA_TYPES_NODEID]);
+    UA_Variant_setScalarCopy(&input[1], certificateGroupId, &UA_TYPES[UA_TYPES_NODEID]);
+    UA_Variant_setScalarCopy(&input[2], certificateTypeId, &UA_TYPES[UA_TYPES_NODEID]);
+    UA_Variant_setScalarCopy(&input[3], csr, &UA_TYPES[UA_TYPES_BYTESTRING]);
     size_t outputSize;
     UA_Variant *output;
     UA_StatusCode  retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 141),
-                                      UA_NODEID_NUMERIC(2, 149), 1, &input, &outputSize, &output);
+                            UA_NODEID_NUMERIC(2, 157), 4, input, &outputSize, &output);
     if(retval == UA_STATUSCODE_GOOD) {
+        *requestId =  *((UA_NodeId*)output[0].data);
+        printf("RequestID: " UA_PRINTF_GUID_FORMAT "\n",
+               UA_PRINTF_GUID_DATA(requestId->identifier.guid));
         UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
     } else {
         printf("Method call was unsuccessful, and %x returned values available.\n", retval);
     }
-    UA_Variant_deleteMembers(&input);
+
+    for(size_t i = 0; i < 4; i++)
+        UA_Variant_deleteMembers(&input[i]);;
+
     return retval;
 }
 */
-/*
+
 static
 UA_StatusCode call_getCertificateGroups(UA_Client *client,
                                                UA_NodeId *applicationId) {
@@ -171,8 +218,7 @@ UA_StatusCode call_startNewKeyPairRequest(UA_Client *client,
 
     return retval;
 }
-*/
-/*
+
 static
 UA_StatusCode call_finishRequest(UA_Client *client,
                                  UA_NodeId *applicationId,
@@ -194,29 +240,14 @@ UA_StatusCode call_finishRequest(UA_Client *client,
         memcpy(certificate->data, cert->data, cert->length);
 
         UA_ByteString *privKey = (UA_ByteString *) output[1].data;
-        UA_ByteString_allocBuffer(privateKey, privKey->length);
-        memcpy(privateKey->data, privKey->data, privKey->length);
+        if (privKey != NULL) {
+            UA_ByteString_allocBuffer(privateKey, privKey->length);
+            memcpy(privateKey->data, privKey->data, privKey->length);
+        }
 
         UA_ByteString *issuer = (UA_ByteString *) output[2].data;
         UA_ByteString_allocBuffer(issuerCertificate, issuer->length);
         memcpy(issuerCertificate[0].data, issuer[0].data, issuer->length);
-
-
-
-//        UA_ByteString *certificate = (UA_ByteString *) output[0].data;
-//        FILE *f = fopen("/home/kocybi/aaa.der", "w");
-//        fwrite(certificate->data, certificate->length, 1, f);
-//        fclose(f);
-//
-//        UA_ByteString *priv = (UA_ByteString *) output[1].data;
-//        FILE *f2 = fopen("/home/kocybi/aaa2.der", "w");
-//        fwrite(priv->data, priv->length, 1, f2);
-//        fclose(f2);
-//
-//        UA_ByteString *issuer = (UA_ByteString *) output[2].data;
-//        FILE *f3 = fopen("/home/kocybi/aaa3.der", "w");
-//        fwrite(issuer[0].data, issuer[0].length, 1, f3);
-//        fclose(f3);
 
         UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
     } else {
@@ -229,10 +260,10 @@ UA_StatusCode call_finishRequest(UA_Client *client,
     return retval;
 
 }
-*/
+
 
 int main(int argc, char **argv) {
-    signal(SIGINT, stopHandler); /* catches ctrl-c */
+    signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
 
     UA_ServerConfig *config = UA_ServerConfig_new_default();
@@ -244,6 +275,8 @@ int main(int argc, char **argv) {
     UA_StatusCode retval = UA_Client_connect_username(client, "opc.tcp://localhost:4841", "user1", "password");
     if(retval != UA_STATUSCODE_GOOD) {
         UA_Client_delete(client);
+        UA_Server_delete(server);
+        UA_ServerConfig_delete(config);
         return (int)retval;
     }
     size_t length = 0;
@@ -272,20 +305,6 @@ int main(int argc, char **argv) {
 
         call_registerApplication(client, &record, &appId);
 
-   /*
-        record.applicationType = UA_APPLICATIONTYPE_SERVER;
-        record.productUri = UA_STRING("urn:open62541.example.server_register");
-        record.applicationNamesSize++;
-        UA_LocalizedText applicationName = UA_LOCALIZEDTEXT("en-US", "open62541_Server");
-        record.applicationNames = &applicationName;
-        record.discoveryUrlsSize++;
-        UA_String discoveryUrl = UA_STRING("opc.tcp://localhost:4840");
-        record.discoveryUrls = &discoveryUrl;
-        record.serverCapabilitiesSize++;
-        UA_String serverCap = UA_STRING("LDS");
-        record.serverCapabilities = &serverCap;
-
-        call_registerApplication(client, &record, &appId);
 
         call_findApplication(client, config->applicationDescription.applicationUri, &length, records);
 
@@ -308,24 +327,26 @@ int main(int argc, char **argv) {
         UA_ByteString privateKey;
         UA_ByteString issuerCertificate;
 
-        call_finishRequest(client, &appId, &requestId, &certificate, &privateKey, &issuerCertificate);
+        if (!UA_NodeId_isNull(&requestId)){
+            call_finishRequest(client, &appId, &requestId, &certificate, &privateKey, &issuerCertificate);
 
-        FILE *f = fopen("/home/kocybi/aaa.der", "w");
-        fwrite(certificate.data, certificate.length, 1, f);
-        fclose(f);
+            FILE *f = fopen("/home/kocybi/aaa.der", "w");
+            fwrite(certificate.data, certificate.length, 1, f);
+            fclose(f);
 
-        FILE *f2 = fopen("/home/kocybi/aaa2.der", "w");
-        fwrite(privateKey.data, privateKey.length, 1, f2);
-        fclose(f2);
+            FILE *f2 = fopen("/home/kocybi/aaa2.der", "w");
+            fwrite(privateKey.data, privateKey.length, 1, f2);
+            fclose(f2);
 
-        FILE *f3 = fopen("/home/kocybi/aaa3.der", "w");
-        fwrite(issuerCertificate.data, issuerCertificate.length, 1, f3);
-        fclose(f3);
+            FILE *f3 = fopen("/home/kocybi/aaa3.der", "w");
+            fwrite(issuerCertificate.data, issuerCertificate.length, 1, f3);
+            fclose(f3);
 
-        UA_ByteString_deleteMembers(&certificate);
-        UA_ByteString_deleteMembers(&privateKey);
-        UA_ByteString_deleteMembers(&issuerCertificate);
-        */
+            UA_ByteString_deleteMembers(&certificate);
+            UA_ByteString_deleteMembers(&privateKey);
+            UA_ByteString_deleteMembers(&issuerCertificate);
+        }
+
     }
 
     UA_Client_disconnect(client);
@@ -334,6 +355,7 @@ int main(int argc, char **argv) {
     UA_ServerConfig_delete(config);
     return (int)retval;
 }
+
 
 
 //

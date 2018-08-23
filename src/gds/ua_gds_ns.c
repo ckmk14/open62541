@@ -25,7 +25,7 @@ finishRequestMethodCallback(UA_Server *server,
                                    size_t outputSize, UA_Variant *output) {
 
     UA_ByteString certificate;
-    UA_ByteString privateKey;
+    UA_ByteString privateKey = UA_BYTESTRING_NULL;
     size_t issuerCertificateSize = 0;
     UA_ByteString *issuerCertificates;
     UA_StatusCode retval =
@@ -36,11 +36,15 @@ finishRequestMethodCallback(UA_Server *server,
 
     if (retval == UA_STATUSCODE_GOOD){
         UA_Variant_setScalarCopy(&output[0], &certificate, &UA_TYPES[UA_TYPES_BYTESTRING]);
-        UA_Variant_setScalarCopy(&output[1], &privateKey, &UA_TYPES[UA_TYPES_BYTESTRING]);
+        if (!UA_ByteString_equal(&privateKey, &UA_BYTESTRING_NULL)){
+            UA_Variant_setScalarCopy(&output[1], &privateKey, &UA_TYPES[UA_TYPES_BYTESTRING]);
+        }
         UA_Variant_setArrayCopy(&output[2], issuerCertificates, issuerCertificateSize, &UA_TYPES[UA_TYPES_BYTESTRING]);
 
         UA_ByteString_deleteMembers(&certificate);
-        UA_ByteString_deleteMembers(&privateKey);
+        if (!UA_ByteString_equal(&privateKey, &UA_BYTESTRING_NULL)){
+            UA_ByteString_deleteMembers(&privateKey);
+        }
         size_t index = 0;
         while (index < issuerCertificateSize){
             UA_ByteString_deleteMembers(&issuerCertificates[index]);
@@ -53,12 +57,36 @@ finishRequestMethodCallback(UA_Server *server,
 }
 
 static UA_StatusCode
+startSigningRequestMethodCallback(UA_Server *server,
+                                  const UA_NodeId *sessionId, void *sessionHandle,
+                                  const UA_NodeId *methodId, void *methodContext,
+                                  const UA_NodeId *objectId, void *objectContext,
+                                  size_t inputSize, const UA_Variant *input,
+                                  size_t outputSize, UA_Variant *output) {
+
+    UA_NodeId requestId;
+    UA_StatusCode retval = GDS_StartSigningRequest(server,
+                                                   (UA_NodeId *) input[0].data,
+                                                   (UA_NodeId *) input[1].data,
+                                                   (UA_NodeId *) input[2].data,
+                                                   (UA_String *) input[3].data,
+                                                   &requestId);
+
+
+    if (retval == UA_STATUSCODE_GOOD)
+        UA_Variant_setScalarCopy(output, &requestId, &UA_TYPES[UA_TYPES_NODEID]);
+
+
+    return retval;
+}
+
+static UA_StatusCode
 startNewKeyPairRequestMethodCallback(UA_Server *server,
                                   const UA_NodeId *sessionId, void *sessionHandle,
                                   const UA_NodeId *methodId, void *methodContext,
                                   const UA_NodeId *objectId, void *objectContext,
                                   size_t inputSize, const UA_Variant *input,
-                                 size_t outputSize, UA_Variant *output) {
+                                  size_t outputSize, UA_Variant *output) {
     UA_NodeId requestId;
     UA_StatusCode retval = GDS_StartNewKeyPairRequest(server,
                                                       (UA_NodeId *) input[0].data,
@@ -213,8 +241,8 @@ addStartSigningRequestMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId di
                             directoryTypeId,
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "StartSigningRequest"),
-                            mAttr, &generalMethodCallback,
-                            3, inputArguments, 1, &outputArgument, NULL, NULL);
+                            mAttr, &startSigningRequestMethodCallback,
+                            4, inputArguments, 1, &outputArgument, NULL, NULL);
 
     UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 157),
                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
