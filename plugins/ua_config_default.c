@@ -192,10 +192,11 @@ createSecurityPolicyBasic256Sha256Endpoint(UA_ServerConfig *const conf,
 
 #ifdef UA_ENABLE_GDS
 static UA_StatusCode createDefaultCertificateGroup(UA_ServerConfig *conf){
+
     conf->gds_certificateGroupSize = 1;
     conf->gds_certificateGroups = (GDS_CertificateGroup *)UA_malloc(sizeof(GDS_CertificateGroup));
     conf->gds_certificateGroups->certificateGroupId = UA_NODEID_NUMERIC(2, 615);
-    conf->gds_certificateGroups->ca = (GDS_CAPlugin *)UA_malloc(sizeof(GDS_CAPlugin));
+    conf->gds_certificateGroups->ca = (GDS_CA *)UA_malloc(sizeof(GDS_CA));
 
     UA_String name = UA_STRING("O=open62541,CN=GDS@localhost");
     UA_InitCA(conf->gds_certificateGroups->ca, name, (60 * 60 * 24 * 365 * 10), 6000, 2048, conf->logger);
@@ -675,7 +676,7 @@ UA_ServerConfig_delete(UA_ServerConfig *config) {
 
 #ifdef UA_ENABLE_GDS
     for(size_t i = 0; i < config->gds_certificateGroupSize; ++i) {
-        GDS_CAPlugin *ca = config->gds_certificateGroups[i].ca;
+        GDS_CA *ca = config->gds_certificateGroups[i].ca;
         ca->deleteMembers(ca);
         UA_free(ca);
     }

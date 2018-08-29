@@ -250,6 +250,7 @@ UA_StatusCode call_finishRequest(UA_Client *client,
         memcpy(issuerCertificate[0].data, issuer[0].data, issuer->length);
 
         UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+        printf("Certificate received\n");
     } else {
         printf("Method call was unsuccessful, and %x returned values available.\n", retval);
     }

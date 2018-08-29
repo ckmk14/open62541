@@ -20,7 +20,16 @@ int main(int argc, char* argv[]) {
     signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
 
+    UA_ByteString certificate = loadFile(argv[1]);
+
     UA_ServerConfig *config = UA_ServerConfig_new_minimal(4841, NULL);;
+
+
+
+    GDS_CA *ca = config->gds_certificateGroups[0].ca;
+    ca->addCertificateToTrustList(ca, &certificate, UA_TRUE);
+
+
 
     config->applicationDescription.applicationType = UA_APPLICATIONTYPE_DISCOVERYSERVER;
     UA_String_deleteMembers(&config->applicationDescription.applicationUri);
@@ -36,7 +45,7 @@ int main(int argc, char* argv[]) {
 
     UA_StatusCode retval = UA_Server_run(server, &running);
 
-
+    UA_ByteString_deleteMembers(&certificate);
     UA_Server_delete(server);
     UA_ServerConfig_delete(config);
     return (int)retval;

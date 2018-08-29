@@ -16,14 +16,16 @@ extern "C" {
 
 #ifdef UA_ENABLE_GDS
 
-UA_EXPORT UA_StatusCode UA_InitCA(GDS_CAPlugin *scg,
+UA_EXPORT UA_StatusCode UA_InitCA(GDS_CA *scg,
                                   UA_String caName,
                                   unsigned int caDays,
                                   int startSerialNumber,
                                   unsigned int caBitKeySize,
                                   UA_Logger logger);
+
+
 //only test puposes
-UA_EXPORT void UA_createCSR(GDS_CAPlugin *scg, UA_ByteString *csr);
+UA_EXPORT void UA_createCSR(GDS_CA *scg, UA_ByteString *csr);
 
 #endif /* UA_ENABLE_GDS */
 

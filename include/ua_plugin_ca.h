@@ -20,14 +20,14 @@ extern "C" {
  * A GDSCertificateGroup represents an interface to exactly one CA.
  * Currently only one plugin interface is implemented which uses GnuTLS.
  * */
-struct GDS_CAPlugin;
-typedef struct GDS_CAPlugin GDS_CAPlugin;
+struct GDS_CA;
+typedef struct GDS_CA GDS_CA;
 
-struct GDS_CAPlugin {
+struct GDS_CA {
     void *context;
     UA_Logger logger;
 
-    UA_StatusCode (*createNewKeyPair) (GDS_CAPlugin *scg,
+    UA_StatusCode (*createNewKeyPair) (GDS_CA *scg,
                                        UA_String *subjectName,
                                        UA_String *privateKeyFormat,
                                        UA_String *privateKeyPassword,
@@ -39,21 +39,37 @@ struct GDS_CAPlugin {
                                        size_t *issuerCertificateSize,
                                        UA_ByteString **issuerCertificates);
 
-    UA_StatusCode (*certificateSigningRequest) (GDS_CAPlugin *scg,
+    UA_StatusCode (*certificateSigningRequest) (GDS_CA *scg,
                                                 unsigned int supposedKeySize,
                                                 UA_ByteString *certificateSigningRequest,
                                                 UA_ByteString *certificate,
                                                 size_t *issuerCertificateSize,
                                                 UA_ByteString **issuerCertificates);
 
+    UA_StatusCode (*addCertificateToTrustList)(GDS_CA *scg,
+                                    UA_ByteString *certificate,
+                                    UA_Boolean isTrustedCertificate);
+
+    UA_StatusCode (*removeCertificateFromTrustlist)(GDS_CA *scg,
+                                                    UA_String *thumbprint,
+                                                    UA_Boolean isTrustedCertificate);
+
+    UA_StatusCode (*getTrustList)(GDS_CA *scg,
+                                  UA_TrustListDataType *list);
+
+    UA_StatusCode(*addCertificatetoCRL)(GDS_CA *scg,
+                                        UA_ByteString *crl,
+                                        UA_ByteString *certificateToRevoke);
+
+
     UA_Boolean  (*isCertificatefromCA) (void *context, UA_ByteString certificate);
 
-    void (*deleteMembers)(GDS_CAPlugin *cv);
+    void (*deleteMembers)(GDS_CA *cv);
 };
 
 typedef struct {
     UA_NodeId certificateGroupId;
-    GDS_CAPlugin *ca;
+    GDS_CA *ca;
 } GDS_CertificateGroup;
 
 #endif

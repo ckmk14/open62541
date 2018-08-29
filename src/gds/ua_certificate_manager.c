@@ -45,7 +45,7 @@ GDS_StartNewKeyPairRequest(UA_Server *server,
     if (UA_NodeId_equal(applicationId,&UA_NODEID_NULL))
         return UA_STATUSCODE_BADINVALIDARGUMENT;
 
-    GDS_CAPlugin *ca = server->config.gds_certificateGroups[0].ca; //DefaultApplicationGroup
+    GDS_CA *ca = server->config.gds_certificateGroups[0].ca; //DefaultApplicationGroup
 
     gds_cm_entry *newEntry = (gds_cm_entry *)UA_calloc(1, sizeof(gds_cm_entry));
 
@@ -91,7 +91,7 @@ GDS_StartSigningRequest(UA_Server *server,
                         UA_ByteString *certificateRequest,
                         UA_NodeId *requestId){
 
-    GDS_CAPlugin *ca = server->config.gds_certificateGroups[0].ca;
+    GDS_CA *ca = server->config.gds_certificateGroups[0].ca;
 
     gds_cm_entry *newEntry = (gds_cm_entry *)UA_calloc(1, sizeof(gds_cm_entry));
 
