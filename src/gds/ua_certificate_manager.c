@@ -58,7 +58,7 @@ GDS_StartNewKeyPairRequest(UA_Server *server,
 
     GDS_CA *ca = server->config.gds_certificateGroups[0].ca; //DefaultApplicationGroup
     gds_cm_entry *newEntry = (gds_cm_entry *)UA_calloc(1, sizeof(gds_cm_entry));
- //   UA_GDS_CM_CHECK_MALLOC(newEntry);
+    UA_GDS_CM_CHECK_MALLOC(newEntry);
 
 
     UA_StatusCode retval = ca->createNewKeyPair(ca, subjectName,

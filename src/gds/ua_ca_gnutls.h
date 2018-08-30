@@ -19,7 +19,8 @@ extern "C" {
 UA_EXPORT UA_StatusCode UA_InitCA(GDS_CA *scg,
                                   UA_String caName,
                                   unsigned int caDays,
-                                  char startSerialNumber,
+                                  size_t startSerialNumberSize,
+                                  char *startSerialNumber,
                                   unsigned int caBitKeySize,
                                   UA_Logger logger);
 

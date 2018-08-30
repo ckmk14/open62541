@@ -47,8 +47,8 @@ struct GDS_CA {
                                                 UA_ByteString **issuerCertificates);
 
     UA_StatusCode (*addCertificateToTrustList)(GDS_CA *scg,
-                                    UA_ByteString *certificate,
-                                    UA_Boolean isTrustedCertificate);
+                                               UA_ByteString *certificate,
+                                               UA_Boolean isTrustedCertificate);
 
     UA_StatusCode (*removeCertificateFromTrustlist)(GDS_CA *scg,
                                                     UA_String *thumbprint,
@@ -58,9 +58,8 @@ struct GDS_CA {
                                   UA_TrustListDataType *list);
 
     UA_StatusCode(*addCertificatetoCRL)(GDS_CA *scg,
-                                        UA_ByteString *crl,
-                                        UA_ByteString *certificateToRevoke);
-
+                                        size_t serialNumberSize,
+                                        char *serialNumber);
 
     UA_Boolean  (*isCertificatefromCA) (void *context, UA_ByteString certificate);
 

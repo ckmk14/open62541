@@ -7,6 +7,8 @@
 #include "ua_ca_gnutls.h"
 #include <gnutls/x509.h>
 #include <ua_types.h>
+#include <src_generated/ua_types_generated.h>
+#include <gnutls/gnutls.h>
 
 #ifdef UA_ENABLE_GDS
 
@@ -31,8 +33,9 @@
 typedef struct {
     gnutls_x509_crt_t ca_crt;
     gnutls_x509_privkey_t ca_key;
-    char serialNumber;
-    char crlNumber;
+    size_t serialNumberSize;
+    size_t serialNumberPointer;
+    char *serialNumber;
     int trustListSize;
     gnutls_x509_trust_list_t trustList;
     gnutls_x509_crl_t  crl;
@@ -67,6 +70,7 @@ static void deleteMembers_gnutls(GDS_CA *cg) {
     gnutls_x509_privkey_deinit(cc->ca_key);
     gnutls_x509_trust_list_deinit(cc->trustList, 1); //CA Certificate will be freed with this call
     gnutls_global_deinit();
+    UA_free(cc->serialNumber);
     UA_free(cc);
     cg->context = NULL;
 }
@@ -284,7 +288,6 @@ UA_StatusCode csr_gnutls(GDS_CA *scg,
     }
 
     //Create Certificate
-    // TODO: DN currently in CSR, not sure if this is always the case (Check .NET GDS)
     gnuErr = gnutls_x509_crt_set_crq(cert, crq);
     UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
     if(ret != UA_STATUSCODE_GOOD)
@@ -295,9 +298,19 @@ UA_StatusCode csr_gnutls(GDS_CA *scg,
     //    gnuErr = gnutls_x509_crq_get_dn(crq, bufferDN, &bufferDN_size);
     //    gnuErr = gnutls_x509_crt_set_dn (cert, bufferDN, NULL);
 
-    //TODO: overflow possible
-    int serialNumber = cc->serialNumber + 1;
-    gnuErr = gnutls_x509_crt_set_serial(cert, &serialNumber, sizeof(int));
+    //Increase the serial number
+    if (cc->serialNumber[cc->serialNumberPointer] < CHAR_MAX) {
+        cc->serialNumber[cc->serialNumberPointer]++;
+    }
+    else if (cc->serialNumberPointer > 0){
+        cc->serialNumber[--cc->serialNumberPointer]++;
+    }
+    else {
+        UA_LOG_WARNING(scg->logger, UA_LOGCATEGORY_SERVER, "Serial number overflow");
+        return UA_STATUSCODE_BADINTERNALERROR;
+    }
+
+    gnuErr = gnutls_x509_crt_set_serial(cert, cc->serialNumber, cc->serialNumberSize);
     UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
 
     ret = setCommonCertificateFields(scg, &cert);
@@ -456,9 +469,19 @@ UA_StatusCode createNewKeyPair_gnutls (GDS_CA *scg,
     if(ret != UA_STATUSCODE_GOOD)
         goto deinit_create;
 
-    //TODO: overflow possible
-    char serialNumber = (char) (cc->serialNumber + 1);
-    gnuErr = gnutls_x509_crt_set_serial(cert, &serialNumber, sizeof(char));
+    //Increase the serial number
+    if (cc->serialNumber[cc->serialNumberPointer] < CHAR_MAX) {
+        cc->serialNumber[cc->serialNumberPointer]++;
+    }
+    else if (cc->serialNumberPointer > 0){
+        cc->serialNumber[--cc->serialNumberPointer]++;
+    }
+    else {
+        UA_LOG_WARNING(scg->logger, UA_LOGCATEGORY_SERVER, "Serial number overflow");
+        return UA_STATUSCODE_BADINTERNALERROR;
+    }
+
+    gnuErr = gnutls_x509_crt_set_serial(cert, cc->serialNumber, cc->serialNumberSize);
     UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
 
     ret = setCommonCertificateFields(scg, &cert);
@@ -546,6 +569,44 @@ deinit_create:
 }
 
 static
+UA_StatusCode addCertificatetoCRL_gnutls(GDS_CA *scg,
+                                  size_t serialNumberSize,
+                                  char *serialNumber) {
+    UA_StatusCode ret = UA_STATUSCODE_GOOD;
+
+    //gnutls supports serial numbers up to 40 bytes
+    if (scg == NULL || serialNumberSize < 1 || serialNumberSize > 40) {
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    CaContext *cc = (CaContext *) scg->context;
+    if (cc == NULL) {
+        return UA_STATUSCODE_BADINTERNALERROR;
+    }
+
+    int gnuErr = gnutls_x509_crl_set_crt_serial(cc->crl, serialNumber, serialNumberSize, time(NULL));
+    UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADINVALIDARGUMENT);
+
+    gnuErr = gnutls_x509_crl_sign2(cc->crl, cc->ca_crt, cc->ca_key, GNUTLS_DIG_SHA256, 0);
+    UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
+
+    char buffer[1024 * 10];
+    //Export issued certificate
+    memset(buffer, 0, sizeof(buffer));
+    size_t buffer_size = sizeof(buffer);
+    gnuErr = gnutls_x509_crl_export(cc->crl, GNUTLS_X509_FMT_DER, buffer, &buffer_size);
+    UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
+
+    FILE *f = fopen("/home/kocybi/test2.crl", "w");
+    fwrite(buffer, buffer_size, 1, f);
+    fclose(f);
+
+
+    return ret;
+}
+
+
+static
 UA_StatusCode removeCertificateFromTrustlist_gnutls(GDS_CA *scg,
                                                     UA_String *thumbprint,
                                                     UA_Boolean isTrustedCertificate){
@@ -557,7 +618,7 @@ UA_StatusCode removeCertificateFromTrustlist_gnutls(GDS_CA *scg,
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
 
-    if (thumbprint->length != 20) { //Shall be a  sha-1 value
+    if (thumbprint->length != 20) { //Shall be a sha-1 value
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
 
@@ -653,6 +714,55 @@ error:
     UA_LOG_GNUERR;
     return UA_STATUSCODE_BADSECURITYCHECKSFAILED;
 }
+static
+UA_StatusCode getTrustList_gnutls(GDS_CA *scg,
+                           UA_TrustListDataType *tl) {
+    UA_StatusCode ret = UA_STATUSCODE_GOOD;
+
+    CaContext *cc = (CaContext *) scg->context;
+    gnutls_x509_trust_list_iter_t trust_iter = NULL;
+    gnutls_x509_crt_t get_ca_crt;
+    gnutls_datum_t get_datum;
+    size_t n_get_ca_crts = 0;
+    int gnuErr = 0;
+
+    tl->trustedCertificatesSize = (size_t) cc->trustListSize;
+    tl->trustedCertificates = (UA_ByteString *)
+            UA_calloc(tl->trustedCertificatesSize, sizeof(UA_ByteString));
+
+    while (gnutls_x509_trust_list_iter_get_ca(cc->trustList, &trust_iter, &get_ca_crt) !=
+           GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE) {
+        gnuErr = gnutls_x509_crt_export2(get_ca_crt, GNUTLS_X509_FMT_DER, &get_datum);
+        UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
+
+        tl->trustedCertificates[n_get_ca_crts].length = get_datum.size;
+        tl->trustedCertificates[n_get_ca_crts].data =
+                (UA_Byte *) UA_malloc(get_datum.size * sizeof(UA_Byte));
+        memcpy(tl->trustedCertificates[n_get_ca_crts].data, get_datum.data, get_datum.size);
+
+        gnutls_x509_crt_deinit(get_ca_crt);
+        gnutls_free(get_datum.data);
+
+        ++n_get_ca_crts;
+    }
+
+    tl->trustedCrlsSize = 1;
+    tl->trustedCrls = (UA_ByteString *)
+            UA_calloc(1, sizeof(UA_ByteString));
+
+    gnuErr = gnutls_x509_crl_export2(cc->crl, GNUTLS_X509_FMT_DER, &get_datum);
+    UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
+
+    tl->trustedCrls[0].length = get_datum.size;
+    tl->trustedCrls[0].data = (UA_Byte *) UA_malloc(get_datum.size * sizeof(UA_Byte));
+    memcpy(tl->trustedCrls[0].data, get_datum.data, get_datum.size);
+
+    gnutls_x509_crt_deinit(get_ca_crt);
+    gnutls_free(get_datum.data);
+
+    return ret;
+}
+
 
 static
 UA_StatusCode create_TrustList(GDS_CA *scg){
@@ -675,7 +785,8 @@ static
 UA_StatusCode create_CACertificate(GDS_CA *scg,
                                     UA_String caName,
                                     unsigned int caDays,
-                                    char serialNumber,
+                                    size_t serialNumberSize,
+                                    char *serialNumber,
                                     unsigned int caBitKeySize){
     CaContext *cc = (CaContext *) scg->context;
 
@@ -694,8 +805,11 @@ UA_StatusCode create_CACertificate(GDS_CA *scg,
 
     gnutls_x509_crt_set_version(cc->ca_crt, 3);
 
-    cc->serialNumber = serialNumber;
-    gnuErr = gnutls_x509_crt_set_serial(cc->ca_crt, &cc->serialNumber, sizeof(char));
+    cc->serialNumberSize = serialNumberSize;
+    cc->serialNumber = (char *) UA_malloc(serialNumberSize * sizeof(char));
+    cc->serialNumberPointer = serialNumberSize - 1;
+    memcpy(cc->serialNumber, serialNumber, serialNumberSize);
+    gnuErr = gnutls_x509_crt_set_serial(cc->ca_crt, cc->serialNumber, cc->serialNumberSize);
     UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
 
     //TODO: This might be an issue (using time.h)
@@ -746,13 +860,15 @@ UA_StatusCode create_CACertificate(GDS_CA *scg,
     gnuErr = gnutls_x509_crl_set_version (cc->crl, 2);
     UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
 
-    cc->crlNumber = 1;
-    gnuErr = gnutls_x509_crl_set_number(cc->crl, &cc->crlNumber, sizeof(char));
+
+    char crlSerialNumber = 1;
+    gnuErr = gnutls_x509_crl_set_number(cc->crl, &crlSerialNumber, sizeof(char));
     UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
 
     gnuErr = gnutls_x509_crl_sign2(cc->crl, cc->ca_crt, cc->ca_key, GNUTLS_DIG_SHA256, 0);
     UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
 
+/*
     char buffer[1024 * 10];
     //Export issued certificate
     memset(buffer, 0, sizeof(buffer));
@@ -763,7 +879,7 @@ UA_StatusCode create_CACertificate(GDS_CA *scg,
     FILE *f = fopen("/home/kocybi/test.crl", "w");
     fwrite(buffer, buffer_size, 1, f);
     fclose(f);
-
+*/
     return ret;
 }
 
@@ -771,11 +887,12 @@ static
 UA_StatusCode create_caContext(GDS_CA *scg,
                                       UA_String caName,
                                       unsigned int caDays,
-                                      char serialNumber,
+                                      size_t serialNumberSize,
+                                      char *serialNumber,
                                       unsigned int caBitKeySize) {
     UA_StatusCode ret;
 
-    if(scg == NULL || serialNumber < 1)
+    if(scg == NULL || serialNumberSize < 1 || serialNumberSize > 40)
         return UA_STATUSCODE_BADINTERNALERROR;
 
     CaContext *cc = (CaContext *) UA_calloc(sizeof(CaContext), 1);
@@ -788,7 +905,7 @@ UA_StatusCode create_caContext(GDS_CA *scg,
     /* Initialize the CaContext */
     gnutls_global_init();
 
-    ret = create_CACertificate(scg, caName, caDays, serialNumber, caBitKeySize);
+    ret = create_CACertificate(scg, caName, caDays, serialNumberSize, serialNumber, caBitKeySize);
     if (ret != UA_STATUSCODE_GOOD)
         goto error;
 
@@ -810,7 +927,8 @@ UA_StatusCode create_caContext(GDS_CA *scg,
 UA_StatusCode UA_InitCA(GDS_CA *scg,
                         UA_String caName,
                         unsigned int caDays,
-                        char sn,
+                        size_t serialNumberSize,
+                        char *serialNumber,
                         unsigned int caBitKeySize,
                         UA_Logger logger) {
     memset(scg, 0, sizeof(GDS_CA));
@@ -820,8 +938,10 @@ UA_StatusCode UA_InitCA(GDS_CA *scg,
     scg->createNewKeyPair = createNewKeyPair_gnutls;
     scg->addCertificateToTrustList = addCertificateToTrustList_gnutls;
     scg->removeCertificateFromTrustlist = removeCertificateFromTrustlist_gnutls;
+    scg->addCertificatetoCRL = addCertificatetoCRL_gnutls;
+    scg->getTrustList = getTrustList_gnutls;
     scg->deleteMembers = deleteMembers_gnutls;
 
-    return create_caContext(scg, caName, caDays, sn, caBitKeySize);
+    return create_caContext(scg, caName, caDays, serialNumberSize, serialNumber, caBitKeySize);
 }
 #endif

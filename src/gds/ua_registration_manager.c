@@ -26,7 +26,6 @@
 
 
 //TODO replacement for string localhost in discoveryurl
- // TODO malloc may fail: return a statuscode
 UA_StatusCode
 GDS_registerApplication(UA_Server *server, UA_ApplicationRecordDataType *input,
                          size_t certificateGroupSize, UA_NodeId *certificateGroupIds, UA_NodeId *output) {
@@ -44,7 +43,7 @@ GDS_registerApplication(UA_Server *server, UA_ApplicationRecordDataType *input,
 
     //ApplicationUri
     if (UA_String_equal(&input->applicationUri, &UA_STRING_NULL)) {
-        UA_GDS_RM_INVALIDARGUMENT
+        UA_GDS_RM_INVALIDARGUMENT;
     }
     record->applicationUri.length = input->applicationUri.length;
     record->applicationUri.data = (UA_Byte *) UA_malloc(input->applicationUri.length * sizeof(UA_Byte));
@@ -55,13 +54,13 @@ GDS_registerApplication(UA_Server *server, UA_ApplicationRecordDataType *input,
     if (input->applicationType != UA_APPLICATIONTYPE_SERVER
         && input->applicationType != UA_APPLICATIONTYPE_CLIENT
         && input->applicationType != UA_APPLICATIONTYPE_DISCOVERYSERVER) {
-        UA_GDS_RM_INVALIDARGUMENT
+        UA_GDS_RM_INVALIDARGUMENT;
     }
     record->applicationType = input->applicationType;
 
     //ApplicationNames
     if(input->applicationNamesSize <= 0) {
-        UA_GDS_RM_INVALIDARGUMENT
+        UA_GDS_RM_INVALIDARGUMENT;
     }
 
     record->applicationNamesSize = input->applicationNamesSize;
@@ -72,7 +71,7 @@ GDS_registerApplication(UA_Server *server, UA_ApplicationRecordDataType *input,
     while(index < input->applicationNamesSize) {
         if(UA_String_equal(&input->applicationNames[index].locale, &UA_STRING_NULL)
            || UA_String_equal(&input->applicationNames[index].text, &UA_STRING_NULL)) {
-            UA_GDS_RM_INVALIDARGUMENT
+            UA_GDS_RM_INVALIDARGUMENT;
         }
         UA_LocalizedText_init(&record->applicationNames[index]);
 
@@ -95,7 +94,7 @@ GDS_registerApplication(UA_Server *server, UA_ApplicationRecordDataType *input,
 
     //ProductUri
     if (UA_String_equal(&input->productUri, &UA_STRING_NULL)) {
-        UA_GDS_RM_INVALIDARGUMENT
+        UA_GDS_RM_INVALIDARGUMENT;
     }
     record->productUri.length = input->productUri.length;
     record->productUri.data = (UA_Byte *) UA_malloc(input->productUri.length * sizeof(UA_Byte));
@@ -106,7 +105,7 @@ GDS_registerApplication(UA_Server *server, UA_ApplicationRecordDataType *input,
     //For servers it is mandatory to specify at least one discoveryUrl.
     //For Clients it is only required if they support reverse connect TODO(inv+ as prefix)
     if(record->applicationType != UA_APPLICATIONTYPE_CLIENT && input->discoveryUrlsSize <= 0) {
-        UA_GDS_RM_INVALIDARGUMENT
+        UA_GDS_RM_INVALIDARGUMENT;
     }
 
     if (input->discoveryUrlsSize > 0) {
@@ -117,7 +116,7 @@ GDS_registerApplication(UA_Server *server, UA_ApplicationRecordDataType *input,
         UA_GDS_RM_CHECK_MALLOC(record->discoveryUrls);
         while(index < record->discoveryUrlsSize) {
             if (UA_String_equal(&input->discoveryUrls[index], &UA_STRING_NULL)) {
-                UA_GDS_RM_INVALIDARGUMENT
+                UA_GDS_RM_INVALIDARGUMENT;
             }
             UA_String_init(&record->discoveryUrls[index]);
 
@@ -133,7 +132,7 @@ GDS_registerApplication(UA_Server *server, UA_ApplicationRecordDataType *input,
 
      //ServerCapabilities
      if(record->applicationType != UA_APPLICATIONTYPE_CLIENT && input->serverCapabilitiesSize <= 0) {
-         UA_GDS_RM_INVALIDARGUMENT
+         UA_GDS_RM_INVALIDARGUMENT;
      }
 
      if (input->serverCapabilitiesSize > 0) {
@@ -143,7 +142,7 @@ GDS_registerApplication(UA_Server *server, UA_ApplicationRecordDataType *input,
                  UA_calloc(record->serverCapabilitiesSize, sizeof(UA_String));
          while(index < record->serverCapabilitiesSize) {
              if (UA_String_equal(&input->serverCapabilities[index], &UA_STRING_NULL)) {
-                 UA_GDS_RM_INVALIDARGUMENT
+                 UA_GDS_RM_INVALIDARGUMENT;
              }
              UA_String_init(&record->serverCapabilities[index]);
 
