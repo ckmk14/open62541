@@ -10,6 +10,17 @@
 
 #ifdef UA_ENABLE_GDS
 
+#define UA_GDS_CM_CHECK_MALLOC(pointer) \
+                    if (!pointer) {    \
+                        UA_LOG_WARNING(server->config.logger, UA_LOGCATEGORY_SERVER, "malloc failed"); \
+                        return UA_STATUSCODE_BADOUTOFMEMORY; \
+                    }
+
+#define UA_GDS_CM_CHECK_ALLOC(errorcode) \
+                    if (errorcode) {    \
+                        UA_LOG_WARNING(server->config.logger, UA_LOGCATEGORY_SERVER, "malloc failed"); \
+                        return errorcode; \
+                    }
 static
 void delete_CertificateManager_entry(gds_cm_entry *newEntry){
     if (!UA_ByteString_equal(&newEntry->certificate, &UA_BYTESTRING_NULL))
@@ -47,6 +58,8 @@ GDS_StartNewKeyPairRequest(UA_Server *server,
 
     GDS_CA *ca = server->config.gds_certificateGroups[0].ca; //DefaultApplicationGroup
     gds_cm_entry *newEntry = (gds_cm_entry *)UA_calloc(1, sizeof(gds_cm_entry));
+ //   UA_GDS_CM_CHECK_MALLOC(newEntry);
+
 
     UA_StatusCode retval = ca->createNewKeyPair(ca, subjectName,
                          privateKeyFormat, privateKeyPassword,
@@ -93,6 +106,7 @@ GDS_StartSigningRequest(UA_Server *server,
     GDS_CA *ca = server->config.gds_certificateGroups[0].ca;
 
     gds_cm_entry *newEntry = (gds_cm_entry *)UA_calloc(1, sizeof(gds_cm_entry));
+    UA_GDS_CM_CHECK_MALLOC(newEntry);
 
     UA_StatusCode retval = ca->certificateSigningRequest(ca, 0, certificateRequest,
                                   &newEntry->certificate,
@@ -126,11 +140,13 @@ GDS_FinishRequest(UA_Server *server,
                   size_t *length,
                   UA_ByteString **issuerCertificate) {
     gds_cm_entry *entry, *entry_tmp;
+    UA_StatusCode ret = UA_STATUSCODE_GOOD;
     LIST_FOREACH_SAFE(entry, &server->certificateManager.gds_cm_list, pointers, entry_tmp) {
        if (UA_NodeId_equal(&entry->requestId, requestId)
            && UA_NodeId_equal(&entry->applicationId, applicationId)
            && entry->isApproved) {
-           UA_ByteString_allocBuffer(certificate, entry->certificate.length);
+           ret = UA_ByteString_allocBuffer(certificate, entry->certificate.length);
+           UA_GDS_CM_CHECK_ALLOC(ret);
            memcpy(certificate->data, entry->certificate.data, entry->certificate.length);
 
            if (!UA_ByteString_equal(&entry->privateKey, &UA_BYTESTRING_NULL)) {
@@ -142,15 +158,17 @@ GDS_FinishRequest(UA_Server *server,
            size_t index = 0;
            *issuerCertificate = (UA_ByteString *)
                    UA_calloc (entry->issuerCertificateSize, sizeof(UA_ByteString));
+           UA_GDS_CM_CHECK_MALLOC(*issuerCertificate);
            while (index < entry->issuerCertificateSize) {
-               UA_ByteString_allocBuffer(issuerCertificate[index],
+               ret = UA_ByteString_allocBuffer(issuerCertificate[index],
                                          entry->issuerCertificates[index].length);
+               UA_GDS_CM_CHECK_ALLOC(ret);
                memcpy(issuerCertificate[index]->data,
                       entry->issuerCertificates[index].data,
                       entry->issuerCertificates[index].length);
                index++;
            }
-           return UA_STATUSCODE_GOOD;
+           return ret;
 
        }
     }
@@ -171,6 +189,7 @@ GDS_GetCertificateGroups(UA_Server *server,
                     *outputSize = current->certificateGroupSize;
                     *certificateGroupIds =
                             (UA_NodeId *) UA_calloc(current->certificateGroupSize, sizeof(UA_NodeId));
+                    UA_GDS_CM_CHECK_MALLOC(*certificateGroupIds);
                     memcpy(*certificateGroupIds,
                            current->certificateGroups,
                            sizeof(UA_NodeId) * current->certificateGroupSize);

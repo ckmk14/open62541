@@ -11,114 +11,129 @@
 #include "server/ua_services.h"
 #ifdef UA_ENABLE_GDS
 
+#define UA_GDS_RM_INVALIDARGUMENT                       \
+            UA_LOG_WARNING(server->config.logger, UA_LOGCATEGORY_SERVER, "Invalid Argument"); \
+            ret = UA_STATUSCODE_BADINVALIDARGUMENT;     \
+            goto error;
 
-/*
-    UA_NodeId applicationId;
-    UA_String applicationUri; xxx
-    UA_ApplicationType applicationType; xxx
-    size_t applicationNamesSize; xxx
-    UA_LocalizedText *applicationNames; xxx
-    UA_String productUri; xxx
-    size_t discoveryUrlsSize;
-    UA_String *discoveryUrls;
-    size_t serverCapabilitiesSize;
-    UA_String *serverCapabilities;
-*/
+
+#define UA_GDS_RM_CHECK_MALLOC(pointer)         \
+        if (!pointer) {   \
+            UA_LOG_WARNING(server->config.logger, UA_LOGCATEGORY_SERVER, "Malloc failed"); \
+            ret = UA_STATUSCODE_BADINVALIDARGUMENT; \
+            goto error;                             \
+        }
+
 
 //TODO replacement for string localhost in discoveryurl
  // TODO malloc may fail: return a statuscode
 UA_StatusCode
- GDS_registerApplication(UA_Server *server, UA_ApplicationRecordDataType *input,
+GDS_registerApplication(UA_Server *server, UA_ApplicationRecordDataType *input,
                          size_t certificateGroupSize, UA_NodeId *certificateGroupIds, UA_NodeId *output) {
-     size_t index = 0;
-     gds_registeredServer_entry *newEntry = (gds_registeredServer_entry *)UA_malloc(sizeof(gds_registeredServer_entry));
-     UA_ApplicationRecordDataType *record = &newEntry->gds_registeredServer;
-     UA_ApplicationRecordDataType_init(record);
+    size_t index = 0;
+    UA_StatusCode ret = UA_STATUSCODE_GOOD;
+    gds_registeredServer_entry *newEntry = (gds_registeredServer_entry *)
+             UA_malloc(sizeof(gds_registeredServer_entry));
+    if (!newEntry) {
+        UA_LOG_WARNING(server->config.logger, UA_LOGCATEGORY_SERVER, "malloc failed");
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+    }
 
-     //ApplicationUri
-     if (UA_String_equal(&input->applicationUri, &UA_STRING_NULL)) {
-         goto error;
-     }
-     record->applicationUri.length = input->applicationUri.length;
-     record->applicationUri.data = (UA_Byte *) malloc(input->applicationUri.length * sizeof(UA_Byte));
-     memcpy(record->applicationUri.data, input->applicationUri.data,input->applicationUri.length);
+    UA_ApplicationRecordDataType *record = &newEntry->gds_registeredServer;
+    UA_ApplicationRecordDataType_init(record);
 
-     //check and set ApplicationType
-     if (input->applicationType != UA_APPLICATIONTYPE_SERVER
-         && input->applicationType != UA_APPLICATIONTYPE_CLIENT
-         && input->applicationType != UA_APPLICATIONTYPE_DISCOVERYSERVER) {
-         goto error;
-     }
-     record->applicationType = input->applicationType;
+    //ApplicationUri
+    if (UA_String_equal(&input->applicationUri, &UA_STRING_NULL)) {
+        UA_GDS_RM_INVALIDARGUMENT
+    }
+    record->applicationUri.length = input->applicationUri.length;
+    record->applicationUri.data = (UA_Byte *) UA_malloc(input->applicationUri.length * sizeof(UA_Byte));
+    UA_GDS_RM_CHECK_MALLOC(record->applicationUri.data);
+    memcpy(record->applicationUri.data, input->applicationUri.data,input->applicationUri.length);
 
-     //ApplicationNames
-     if(input->applicationNamesSize <= 0) {
-         goto error;
-     }
+    //check and set ApplicationType
+    if (input->applicationType != UA_APPLICATIONTYPE_SERVER
+        && input->applicationType != UA_APPLICATIONTYPE_CLIENT
+        && input->applicationType != UA_APPLICATIONTYPE_DISCOVERYSERVER) {
+        UA_GDS_RM_INVALIDARGUMENT
+    }
+    record->applicationType = input->applicationType;
 
-     record->applicationNamesSize = input->applicationNamesSize;
-     record->applicationNames = (UA_LocalizedText *)
+    //ApplicationNames
+    if(input->applicationNamesSize <= 0) {
+        UA_GDS_RM_INVALIDARGUMENT
+    }
+
+    record->applicationNamesSize = input->applicationNamesSize;
+    record->applicationNames = (UA_LocalizedText *)
              UA_calloc(record->applicationNamesSize, sizeof(UA_LocalizedText));
-     while(index < input->applicationNamesSize) {
-         if(UA_String_equal(&input->applicationNames[index].locale, &UA_STRING_NULL)
-            || UA_String_equal(&input->applicationNames[index].text, &UA_STRING_NULL)) {
-             goto error;
-         }
-         UA_LocalizedText_init(&record->applicationNames[index]);
+    UA_GDS_RM_CHECK_MALLOC(record->applicationNames);
 
-         size_t locale_length = input->applicationNames[index].locale.length;
-         record->applicationNames[index].locale.length = locale_length;
-         record->applicationNames[index].locale.data = (UA_Byte *) malloc(locale_length * sizeof (UA_Byte));
-         memcpy(record->applicationNames[index].locale.data, input->applicationNames[index].locale.data, locale_length);
+    while(index < input->applicationNamesSize) {
+        if(UA_String_equal(&input->applicationNames[index].locale, &UA_STRING_NULL)
+           || UA_String_equal(&input->applicationNames[index].text, &UA_STRING_NULL)) {
+            UA_GDS_RM_INVALIDARGUMENT
+        }
+        UA_LocalizedText_init(&record->applicationNames[index]);
 
-         size_t text_length = input->applicationNames[index].text.length;
-         record->applicationNames[index].text.length = text_length;
-         record->applicationNames[index].text.data = (UA_Byte *) malloc(text_length * sizeof (UA_Byte));
-         memcpy(record->applicationNames[index].text.data, input->applicationNames[index].text.data, text_length);
+        size_t locale_length = input->applicationNames[index].locale.length;
+        record->applicationNames[index].locale.length = locale_length;
+        record->applicationNames[index].locale.data = (UA_Byte *)
+                UA_malloc(locale_length * sizeof (UA_Byte));
+        UA_GDS_RM_CHECK_MALLOC(record->applicationNames[index].locale.data);
+        memcpy(record->applicationNames[index].locale.data, input->applicationNames[index].locale.data, locale_length);
 
-         index++;
-     }
+        size_t text_length = input->applicationNames[index].text.length;
+        record->applicationNames[index].text.length = text_length;
+        record->applicationNames[index].text.data = (UA_Byte *)
+                UA_malloc(text_length * sizeof (UA_Byte));
+        UA_GDS_RM_CHECK_MALLOC(record->applicationNames[index].text.data);
+        memcpy(record->applicationNames[index].text.data, input->applicationNames[index].text.data, text_length);
 
-     //ProductUri
-     if (UA_String_equal(&input->productUri, &UA_STRING_NULL)) {
-         goto error;
-     }
-     record->productUri.length = input->productUri.length;
-     record->productUri.data = (UA_Byte *) malloc(input->productUri.length * sizeof(UA_Byte));
-     memcpy(record->productUri.data, input->productUri.data, input->productUri.length);
+        index++;
+    }
 
+    //ProductUri
+    if (UA_String_equal(&input->productUri, &UA_STRING_NULL)) {
+        UA_GDS_RM_INVALIDARGUMENT
+    }
+    record->productUri.length = input->productUri.length;
+    record->productUri.data = (UA_Byte *) UA_malloc(input->productUri.length * sizeof(UA_Byte));
+    UA_GDS_RM_CHECK_MALLOC(record->productUri.data);
+    memcpy(record->productUri.data, input->productUri.data, input->productUri.length);
 
-     //DiscoveryUrls
-     //For servers it is mandatory to specify at least one discoveryUrl.
-     //For Clients it is only required if they support reverse connect TODO(inv+ as prefix)
-     if(record->applicationType != UA_APPLICATIONTYPE_CLIENT && input->discoveryUrlsSize <= 0) {
-         goto error;
-     }
+    //DiscoveryUrls
+    //For servers it is mandatory to specify at least one discoveryUrl.
+    //For Clients it is only required if they support reverse connect TODO(inv+ as prefix)
+    if(record->applicationType != UA_APPLICATIONTYPE_CLIENT && input->discoveryUrlsSize <= 0) {
+        UA_GDS_RM_INVALIDARGUMENT
+    }
 
-     if (input->discoveryUrlsSize > 0) {
-         index = 0;
-         record->discoveryUrlsSize = input->discoveryUrlsSize;
-         record->discoveryUrls = (UA_String *)
-                 UA_calloc(record->discoveryUrlsSize, sizeof(UA_String));
-         while(index < record->discoveryUrlsSize) {
-             if (UA_String_equal(&input->discoveryUrls[index], &UA_STRING_NULL)) {
-                 goto error;
-             }
-             UA_String_init(&record->discoveryUrls[index]);
+    if (input->discoveryUrlsSize > 0) {
+        index = 0;
+        record->discoveryUrlsSize = input->discoveryUrlsSize;
+        record->discoveryUrls = (UA_String *)
+                UA_calloc(record->discoveryUrlsSize, sizeof(UA_String));
+        UA_GDS_RM_CHECK_MALLOC(record->discoveryUrls);
+        while(index < record->discoveryUrlsSize) {
+            if (UA_String_equal(&input->discoveryUrls[index], &UA_STRING_NULL)) {
+                UA_GDS_RM_INVALIDARGUMENT
+            }
+            UA_String_init(&record->discoveryUrls[index]);
 
-             size_t discoveryLength = input->discoveryUrls[index].length;
-             record->discoveryUrls[index].length = discoveryLength;
-             record->discoveryUrls[index].data =
-                     (UA_Byte *) malloc(discoveryLength * sizeof(UA_Byte));
-             memcpy(record->discoveryUrls[index].data, input->discoveryUrls[index].data, discoveryLength);
-
-             index++;
+            size_t discoveryLength = input->discoveryUrls[index].length;
+            record->discoveryUrls[index].length = discoveryLength;
+            record->discoveryUrls[index].data =
+                     (UA_Byte *) UA_malloc(discoveryLength * sizeof(UA_Byte));
+            UA_GDS_RM_CHECK_MALLOC(record->discoveryUrls[index].data);
+            memcpy(record->discoveryUrls[index].data, input->discoveryUrls[index].data, discoveryLength);
+            index++;
          }
      }
 
      //ServerCapabilities
      if(record->applicationType != UA_APPLICATIONTYPE_CLIENT && input->serverCapabilitiesSize <= 0) {
-         goto error;
+         UA_GDS_RM_INVALIDARGUMENT
      }
 
      if (input->serverCapabilitiesSize > 0) {
@@ -128,14 +143,15 @@ UA_StatusCode
                  UA_calloc(record->serverCapabilitiesSize, sizeof(UA_String));
          while(index < record->serverCapabilitiesSize) {
              if (UA_String_equal(&input->serverCapabilities[index], &UA_STRING_NULL)) {
-                 goto error;
+                 UA_GDS_RM_INVALIDARGUMENT
              }
              UA_String_init(&record->serverCapabilities[index]);
 
              size_t capLength = input->serverCapabilities[index].length;
              record->serverCapabilities[index].length = capLength;
              record->serverCapabilities[index].data =
-                     (UA_Byte *) malloc(capLength * sizeof(UA_Byte));
+                     (UA_Byte *) UA_malloc(capLength * sizeof(UA_Byte));
+             UA_GDS_RM_CHECK_MALLOC(record->serverCapabilities[index].data);
              memcpy(record->serverCapabilities[index].data, input->serverCapabilities[index].data, capLength);
 
              index++;
@@ -148,6 +164,7 @@ UA_StatusCode
          newEntry->certificateGroupSize = certificateGroupSize;
          newEntry->certificateGroups = (UA_NodeId *)
                  UA_calloc(certificateGroupSize, sizeof(UA_NodeId));
+         UA_GDS_RM_CHECK_MALLOC(newEntry->certificateGroups);
          while(index < certificateGroupSize) {
              memcpy(&newEntry->certificateGroups[index], &certificateGroupIds[index], sizeof(UA_NodeId));
              index++;
@@ -166,7 +183,7 @@ error:
      UA_ApplicationRecordDataType_deleteMembers(record);
      UA_free(newEntry);
 
-     return UA_STATUSCODE_BADINVALIDARGUMENT;
+     return ret;
 }
 
 UA_StatusCode
@@ -188,6 +205,10 @@ GDS_findApplication(UA_Server *server, UA_String *applicationUri,
         *outputSize = foundServersSize;
         if (foundServersSize > 0) {
             *output = (UA_ApplicationRecordDataType *) UA_calloc(foundServersSize, sizeof(UA_ApplicationRecordDataType));
+            if (*output == NULL) {
+                UA_LOG_WARNING(server->config.logger, UA_LOGCATEGORY_SERVER, "Malloc failed");
+                return UA_STATUSCODE_BADOUTOFMEMORY;
+            }
             for(size_t i = 0; i < foundServersSize; i++) {
                 memcpy(output[i], gds_foundServers[i], sizeof(UA_ApplicationRecordDataType));
                 i++;
