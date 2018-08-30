@@ -199,7 +199,7 @@ static UA_StatusCode createDefaultCertificateGroup(UA_ServerConfig *conf){
     conf->gds_certificateGroups->ca = (GDS_CA *)UA_malloc(sizeof(GDS_CA));
 
     UA_String name = UA_STRING("O=open62541,CN=GDS@localhost");
-    UA_InitCA(conf->gds_certificateGroups->ca, name, (60 * 60 * 24 * 365 * 10), 6000, 2048, conf->logger);
+    UA_InitCA(conf->gds_certificateGroups->ca, name, (60 * 60 * 24 * 365 * 10), (char) 6, 2048, conf->logger);
     return UA_STATUSCODE_GOOD;
 }
 #endif

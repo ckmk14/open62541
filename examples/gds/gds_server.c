@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <open62541.h>
+#include <ua_plugin_ca.h>
 #include "open62541.h"
 #include "common.h"
 /** It follows the main server code, making use of the above definitions. */
@@ -26,10 +27,8 @@ int main(int argc, char* argv[]) {
 
 
 
-    GDS_CA *ca = config->gds_certificateGroups[0].ca;
-    ca->addCertificateToTrustList(ca, &certificate, UA_TRUE);
-
-
+   // GDS_CA *ca = config->gds_certificateGroups[0].ca;
+   // ca->addCertificateToTrustList(ca, &certificate, UA_TRUE);
 
     config->applicationDescription.applicationType = UA_APPLICATIONTYPE_DISCOVERYSERVER;
     UA_String_deleteMembers(&config->applicationDescription.applicationUri);

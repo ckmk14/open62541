@@ -1,10 +1,10 @@
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2018 (c) Markus Karch, Fraunhofer IOSB
  */
 
-#include <ua_types.h>
 #include "ua_certificate_manager.h"
 #include "server/ua_server_internal.h"
 
@@ -46,7 +46,6 @@ GDS_StartNewKeyPairRequest(UA_Server *server,
         return UA_STATUSCODE_BADINVALIDARGUMENT;
 
     GDS_CA *ca = server->config.gds_certificateGroups[0].ca; //DefaultApplicationGroup
-
     gds_cm_entry *newEntry = (gds_cm_entry *)UA_calloc(1, sizeof(gds_cm_entry));
 
     UA_StatusCode retval = ca->createNewKeyPair(ca, subjectName,

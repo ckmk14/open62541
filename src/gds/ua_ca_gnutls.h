@@ -19,12 +19,12 @@ extern "C" {
 UA_EXPORT UA_StatusCode UA_InitCA(GDS_CA *scg,
                                   UA_String caName,
                                   unsigned int caDays,
-                                  int startSerialNumber,
+                                  char startSerialNumber,
                                   unsigned int caBitKeySize,
                                   UA_Logger logger);
 
 
-//only test puposes
+//only for test purposes
 UA_EXPORT void UA_createCSR(GDS_CA *scg, UA_ByteString *csr);
 
 #endif /* UA_ENABLE_GDS */
