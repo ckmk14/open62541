@@ -24,14 +24,15 @@ int main(int argc, char* argv[]) {
     UA_ServerConfig *config = UA_ServerConfig_new_minimal(4841, NULL);;
 
 
-    GDS_CA *ca = config->gds_certificateGroups[0].ca;
-    ca->addCertificateToTrustList(ca, &certificate, UA_TRUE);
+ //   GDS_CA *ca = config->gds_certificateGroups[0].ca;
+ //   ca->addCertificateToTrustList(ca, &certificate, UA_TRUE);
 
-    UA_TrustListDataType list;
-    UA_TrustListDataType_init(&list);
-    ca->getTrustList(ca, &list);
 
-    UA_TrustListDataType_deleteMembers(&list);
+ //   UA_TrustListDataType list;
+ //   UA_TrustListDataType_init(&list);
+ //   ca->getTrustList(ca, &list);
+
+ //   UA_TrustListDataType_deleteMembers(&list);
 
 
 

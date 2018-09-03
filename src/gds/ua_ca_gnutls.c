@@ -6,9 +6,6 @@
 
 #include "ua_ca_gnutls.h"
 #include <gnutls/x509.h>
-#include <ua_types.h>
-#include <src_generated/ua_types_generated.h>
-#include <gnutls/gnutls.h>
 
 #ifdef UA_ENABLE_GDS
 
@@ -64,8 +61,6 @@ static void deleteMembers_gnutls(GDS_CA *cg) {
 
     CaContext *cc = (CaContext *) cg->context;
 
-  //  printf("\n%u\n", cc->trustListSize);
-  //  gnutls_x509_crt_deinit(cc->ca_crt);
     gnutls_x509_crl_deinit(cc->crl);
     gnutls_x509_privkey_deinit(cc->ca_key);
     gnutls_x509_trust_list_deinit(cc->trustList, 1); //CA Certificate will be freed with this call

@@ -16,6 +16,26 @@
 /*         CertificateManager-Callbacks       */
 /**********************************************/
 
+static UA_StatusCode
+startGetTrustListMethodCallback(UA_Server *server,
+                                  const UA_NodeId *sessionId, void *sessionHandle,
+                                  const UA_NodeId *methodId, void *methodContext,
+                                  const UA_NodeId *objectId, void *objectContext,
+                                  size_t inputSize, const UA_Variant *input,
+                                  size_t outputSize, UA_Variant *output) {
+
+    UA_NodeId trustListId;
+    UA_StatusCode retval = GDS_GetTrustList(server,
+                                            sessionId,
+                                            (UA_NodeId *) input[0].data,
+                                            (UA_NodeId *) input[1].data,
+                                            &trustListId);
+
+    if (retval == UA_STATUSCODE_GOOD)
+        UA_Variant_setScalarCopy(output, &trustListId, &UA_TYPES[UA_TYPES_NODEID]);
+    
+    return retval;
+}
 
 static UA_StatusCode
 finishRequestMethodCallback(UA_Server *server,
@@ -434,7 +454,7 @@ addGetTrustListMethod(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directory
                             directoryTypeId,
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "GetTrustList"),
-                            mAttr, &findApplicationMethodCallback,
+                            mAttr, &startGetTrustListMethodCallback,
                             2, inputArguments, 1, &outputArgument, NULL, NULL);
 
     UA_Server_addReference(server, UA_NODEID_NUMERIC(ns_index, 204),

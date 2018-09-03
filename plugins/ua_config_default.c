@@ -196,6 +196,7 @@ static UA_StatusCode createDefaultCertificateGroup(UA_ServerConfig *conf){
     conf->gds_certificateGroupSize = 1;
     conf->gds_certificateGroups = (GDS_CertificateGroup *)UA_malloc(sizeof(GDS_CertificateGroup));
     conf->gds_certificateGroups->certificateGroupId = UA_NODEID_NUMERIC(2, 615);
+    conf->gds_certificateGroups->trustListId = UA_NODEID_NUMERIC(2, 616);
     conf->gds_certificateGroups->ca = (GDS_CA *)UA_malloc(sizeof(GDS_CA));
 
     UA_String name = UA_STRING("O=open62541,CN=GDS@localhost");

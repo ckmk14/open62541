@@ -29,9 +29,19 @@ typedef struct gds_cm_entry {
     UA_ByteString *issuerCertificates;
 } gds_cm_entry;
 
+typedef struct gds_cm_tl_entry {
+    LIST_ENTRY(gds_cm_tl_entry) pointers;
+    UA_TrustListDataType trustList;
+    UA_NodeId sessionId;
+    UA_UInt32 fileHandle;
+    UA_Boolean isOpen;
+} gds_cm_tl_entry;
+
 typedef struct{
     LIST_HEAD(gds_cm__list, gds_cm_entry) gds_cm_list;
     size_t counter;
+    LIST_HEAD(gds_cm__tl, gds_cm_tl_entry) gds_cm_trustList;
+    size_t trustListCounter;
 } GDS_CertificateManager;
 
 UA_StatusCode
@@ -45,6 +55,13 @@ GDS_FinishRequest(UA_Server *server,
                   UA_ByteString *privKey,
                   size_t *length,
                   UA_ByteString **issuerCertificate);
+
+UA_StatusCode
+GDS_GetTrustList(UA_Server *server,
+                 const UA_NodeId *sessionId,
+                 UA_NodeId *applicationId,
+                 UA_NodeId *certificateGroupId,
+                 UA_NodeId *trustListId);
 
 UA_StatusCode
 GDS_StartNewKeyPairRequest(UA_Server *server,
