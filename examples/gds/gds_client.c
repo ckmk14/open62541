@@ -173,12 +173,6 @@ UA_StatusCode call_getCertificateGroups(UA_Client *client,
             *certificateGroups = (UA_NodeId *) UA_calloc (output->arrayLength, sizeof(UA_NodeId));
             memcpy(*certificateGroups, output->data, output->arrayLength * sizeof(UA_NodeId));
         }
-/*
-        if (cgs != NULL) {
-            printf("CertificateGroupID: NS:%u;Value=%u\n", cgs->namespaceIndex, cgs->identifier.numeric);
-            *certificateGroups = *cgs;
-        }
-*/
         UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
     } else {
         printf("Method call was unsuccessful, and %x returned values available.\n", retval);
@@ -300,6 +294,97 @@ UA_StatusCode call_getTrustList(UA_Client *client,
 }
 
 
+static
+UA_StatusCode call_openTrustList(UA_Client *client,
+                                UA_Byte *mode,
+                                UA_UInt32 *fileHandle) {
+
+    UA_Variant input;
+    UA_Variant_setScalarCopy(&input, mode, &UA_TYPES[UA_TYPES_BYTE]);
+    size_t outputSize;
+    UA_Variant *output;
+    UA_StatusCode retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 616),
+                                          UA_NODEID_NUMERIC(0, 11580), 1, &input, &outputSize, &output);
+    if(retval == UA_STATUSCODE_GOOD) {
+        *fileHandle = *(UA_UInt32 *) output->data;
+        printf("Received FileHandle: %u\n", *fileHandle);
+        UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+    } else {
+        printf("Method call was unsuccessful, and %x returned values available.\n", retval);
+    }
+
+    UA_Variant_deleteMembers(&input);
+
+    return retval;
+
+}
+
+static
+UA_StatusCode call_closeTrustList(UA_Client *client,
+                                 UA_UInt32 *fileHandle) {
+
+    UA_Variant input;
+    UA_Variant_setScalarCopy(&input, fileHandle, &UA_TYPES[UA_TYPES_UINT32]);
+    UA_StatusCode retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 616),
+                                          UA_NODEID_NUMERIC(0, 11583), 1, &input, NULL, NULL);
+    if(retval == UA_STATUSCODE_GOOD) {
+        printf("Closed TrustList\n");
+    } else {
+        printf("Method call was unsuccessful, and %x returned values available.\n", retval);
+    }
+
+    UA_Variant_deleteMembers(&input);
+
+    return retval;
+
+}
+
+static
+UA_StatusCode call_readTrustList(UA_Client *client,
+                                 UA_UInt32 *fileHandle,
+                                 UA_Int32 *length,
+                                 UA_TrustListDataType *tl) {
+
+    UA_Variant input[2];
+    UA_Variant_setScalarCopy(&input[0], fileHandle, &UA_TYPES[UA_TYPES_UINT32]);
+    UA_Variant_setScalarCopy(&input[1], length, &UA_TYPES[UA_TYPES_INT32]);
+    size_t outputSize;
+    UA_Variant *output;;
+    UA_StatusCode retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 616),
+                                          UA_NODEID_NUMERIC(2, 999), 2, input, &outputSize, &output);
+    if(retval == UA_STATUSCODE_GOOD) {
+        tl =  (UA_TrustListDataType *) output->data;
+        if (tl != NULL) {
+
+            printf("\nTrustListSize: %lu\n", tl->trustedCertificatesSize);
+            printf("\nTrustedCRLsSize: %lu\n", tl->trustedCrlsSize);
+            FILE *f = fopen("/home/kocybi/tl1.der", "w");
+            fwrite(tl->trustedCertificates[0].data, tl->trustedCertificates[0].length, 1, f);
+            fclose(f);
+
+            FILE *f2 = fopen("/home/kocybi/tl123.der", "w");
+            fwrite(tl->trustedCertificates[1].data, tl->trustedCertificates[1].length, 1, f2);
+            fclose(f2);
+
+            FILE *f3 = fopen("/home/kocybi/tl3.der", "w");
+            fwrite(tl->trustedCrls[0].data, tl->trustedCrls[0].length, 1, f3);
+            fclose(f3);
+
+
+            printf("Ja");
+        }
+    } else {
+        printf("Method call was unsuccessful, and %x returned values available.\n", retval);
+    }
+
+    for(size_t i = 0; i < 2; i++)
+        UA_Variant_deleteMembers(&input[i]);
+
+    return retval;
+
+}
+
+
 int main(int argc, char **argv) {
     signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
@@ -350,7 +435,14 @@ int main(int argc, char **argv) {
 
         UA_NodeId trustListId;
         call_getTrustList(client, &appId, certificateGroupId, &trustListId);
+        UA_UInt32 filehandle;
+        UA_Byte mode = 0x01; //ReadMode (Part 5,p.100).
+        call_openTrustList(client, &mode, &filehandle);
 
+        UA_TrustListDataType tl;
+        UA_Int32  tmp_length = 0;
+        call_readTrustList(client, &filehandle, &tmp_length, &tl);
+        call_closeTrustList(client, &filehandle);
 
         UA_NodeId requestId;
         UA_String subjectName = UA_STRING("C=DE,O=open62541,CN=open62541@localhost");

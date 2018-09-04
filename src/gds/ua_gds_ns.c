@@ -6,6 +6,8 @@
  */
 
 
+#include <src_generated/ua_types_generated.h>
+#include <ua_types.h>
 #include "ua_gds_ns.h"
 #include "ua_registration_manager.h"
 #include "ua_certificate_manager.h"
@@ -16,6 +18,81 @@
 /*         CertificateManager-Callbacks       */
 /**********************************************/
 
+
+static UA_StatusCode
+openMethodCallback(UA_Server *server,
+                                const UA_NodeId *sessionId, void *sessionHandle,
+                                const UA_NodeId *methodId, void *methodContext,
+                                const UA_NodeId *objectId, void *objectContext,
+                                size_t inputSize, const UA_Variant *input,
+                                size_t outputSize, UA_Variant *output) {
+    printf("\nIn Method Open\n");
+    UA_UInt32 fileHandle;
+    UA_StatusCode retval = GDS_OpenTrustList(server,
+                                             sessionId,
+                                             objectId,
+                                             (UA_Byte *) input[0].data,
+                                             &fileHandle);
+
+    if (retval == UA_STATUSCODE_GOOD)
+        UA_Variant_setScalarCopy(output, &fileHandle, &UA_TYPES[UA_TYPES_UINT32]);
+
+    return retval;
+}
+
+static UA_StatusCode
+readTrustListMethodCallback(UA_Server *server,
+                            const UA_NodeId *sessionId, void *sessionHandle,
+                            const UA_NodeId *methodId, void *methodContext,
+                            const UA_NodeId *objectId, void *objectContext,
+                            size_t inputSize, const UA_Variant *input,
+                            size_t outputSize, UA_Variant *output) {
+    printf("\nIn Method ReadTrustList\n");
+
+    UA_TrustListDataType tl;
+    UA_StatusCode retval = GDS_ReadTrustList(server,
+                                             sessionId,
+                                             objectId,
+                                             (UA_UInt32 *) input[0].data,
+                                             (UA_Int32 *) input[1].data,
+                                             &tl);
+
+/*
+    FILE *f = fopen("/home/kocybi/tl1.der", "w");
+    fwrite(tl.trustedCertificates[0].data, tl.trustedCertificates[0].length, 1, f);
+    fclose(f);
+
+    FILE *f2 = fopen("/home/kocybi/tl2.der", "w");
+    fwrite(tl.trustedCertificates[1].data, tl.trustedCertificates[1].length, 1, f2);
+    fclose(f2);
+
+    FILE *f3 = fopen("/home/kocybi/tl3.der", "w");
+    fwrite(tl.trustedCrls[0].data, tl.trustedCrls[0].length, 1, f3);
+    fclose(f3);
+*/
+    if (retval == UA_STATUSCODE_GOOD)
+        UA_Variant_setScalarCopy(output, &tl, &UA_TYPES[UA_TYPES_TRUSTLISTDATATYPE]);
+
+    return retval;
+}
+
+static UA_StatusCode
+closeMethodCallback(UA_Server *server,
+                   const UA_NodeId *sessionId, void *sessionHandle,
+                   const UA_NodeId *methodId, void *methodContext,
+                   const UA_NodeId *objectId, void *objectContext,
+                   size_t inputSize, const UA_Variant *input,
+                   size_t outputSize, UA_Variant *output) {
+    printf("\nIn Method Close\n");
+
+    UA_StatusCode retval = GDS_CloseTrustList(server,
+                                             sessionId,
+                                             objectId,
+                                             (UA_UInt32 *) input[0].data);
+
+    return retval;
+}
+
 static UA_StatusCode
 startGetTrustListMethodCallback(UA_Server *server,
                                   const UA_NodeId *sessionId, void *sessionHandle,
@@ -23,7 +100,7 @@ startGetTrustListMethodCallback(UA_Server *server,
                                   const UA_NodeId *objectId, void *objectContext,
                                   size_t inputSize, const UA_Variant *input,
                                   size_t outputSize, UA_Variant *output) {
-
+    printf("\nIn Method GetTrustList\n");
     UA_NodeId trustListId;
     UA_StatusCode retval = GDS_GetTrustList(server,
                                             sessionId,
@@ -33,7 +110,7 @@ startGetTrustListMethodCallback(UA_Server *server,
 
     if (retval == UA_STATUSCODE_GOOD)
         UA_Variant_setScalarCopy(output, &trustListId, &UA_TYPES[UA_TYPES_NODEID]);
-    
+
     return retval;
 }
 
@@ -134,6 +211,7 @@ getCertificateGroupsMethodCallback(UA_Server *server,
                                    const UA_NodeId *objectId, void *objectContext,
                                    size_t inputSize, const UA_Variant *input,
                                    size_t outputSize, UA_Variant *output) {
+    printf("\nIn Method GetCertificateGroups\n");
     size_t length = 0;
     UA_NodeId *array;
     UA_StatusCode retval =
@@ -508,6 +586,41 @@ addGetCertificateStatus(UA_Server *server, UA_UInt16 ns_index, UA_NodeId directo
 
 }
 
+static void
+addReadTrustList(UA_Server *server, UA_UInt16 ns_index, UA_NodeId trustList){
+    UA_Argument inputArguments[2];
+
+    UA_Argument_init(&inputArguments[0]);
+    inputArguments[0].description = UA_LOCALIZEDTEXT("en-US", "fileHandle");
+    inputArguments[0].name = UA_STRING("FileHandle");
+    inputArguments[0].dataType = UA_TYPES[UA_TYPES_UINT32].typeId;
+    inputArguments[0].valueRank = -1; /* scalar */
+
+    UA_Argument_init(&inputArguments[1]);
+    inputArguments[1].description = UA_LOCALIZEDTEXT("en-US", "length");
+    inputArguments[1].name = UA_STRING("Length");
+    inputArguments[1].dataType = UA_TYPES[UA_TYPES_INT32].typeId;
+    inputArguments[1].valueRank = -1; /* scalar */
+
+    UA_Argument outputArgument;
+    UA_Argument_init(&outputArgument);
+    outputArgument.description = UA_LOCALIZEDTEXT("en-US", "TrustList");
+    outputArgument.name = UA_STRING("TrustListDataType");
+    outputArgument.dataType = UA_TYPES[UA_TYPES_TRUSTLISTDATATYPE].typeId;
+    outputArgument.valueRank = -1;
+
+    UA_MethodAttributes mAttr = UA_MethodAttributes_default;
+    mAttr.displayName = UA_LOCALIZEDTEXT("en-US","ReadTrustList");
+    mAttr.executable = true;
+    mAttr.userExecutable = true;
+    UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(ns_index, 999),
+                            trustList,
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                            UA_QUALIFIEDNAME(ns_index, "ReadTrustList"),
+                            mAttr, &readTrustListMethodCallback,
+                            2, inputArguments, 1, &outputArgument, NULL, NULL);
+}
+
 /**********************************************/
 /*         RegistrationManager-Methods        */
 /**********************************************/
@@ -879,11 +992,6 @@ addCertificateDirectoryType(UA_Server *server, UA_UInt16 ns_index){
                             UA_NODEID_NUMERIC(0, UA_NS0ID_CERTIFICATEGROUPFOLDERTYPE),
                             oAttr, NULL, NULL);
 
-// TODO not working
-//    UA_Server_addReference(server, certificateGroupsId,
-//                           UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
-//                           UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
-
     addStartSigningRequestMethod(server, ns_index, certificateDirectoryTypeId);
 
     addStartNewKeyPairRequestMethod(server, ns_index, certificateDirectoryTypeId);
@@ -922,23 +1030,34 @@ createCertificateDirectoryObject(UA_Server *server, UA_UInt16 ns_index){
                             (const UA_NodeAttributes*)&oAttr, &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],
                             NULL, NULL);
 
+    UA_NodeId defaultApplicationGroup = UA_NODEID_NUMERIC(ns_index, 615);
     UA_ObjectAttributes oAttr2 = UA_ObjectAttributes_default;
     oAttr2.displayName = UA_LOCALIZEDTEXT("en-US", "DefaultApplicationGroup");
-    UA_Server_addObjectNode(server, UA_NODEID_NUMERIC(ns_index, 615),
+    UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
+                            defaultApplicationGroup,
                             certificateGroupsId,
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                             UA_QUALIFIEDNAME(ns_index, "DefaultApplicationGroup"),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_CERTIFICATEGROUPTYPE),
-                            oAttr2, NULL, NULL);
+                            (const UA_NodeAttributes*)&oAttr2, &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],
+                            NULL, NULL);
 
-   // UA_Server_addNode_finish(server, certificateGroupsId);
-   /* UA_Server_addObjectNode(server, certificateGroupsId,
-                            UA_NODEID_NUMERIC(ns_index, 141),
-                            UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-                            UA_QUALIFIEDNAME(ns_index, "CertificateGroups"),
-                            UA_NODEID_NUMERIC(0, UA_NS0ID_CERTIFICATEGROUPFOLDERTYPE),
-                            oAttr, NULL, NULL);
-*/
+
+    UA_ObjectAttributes trustlist = UA_ObjectAttributes_default;
+    trustlist.displayName = UA_LOCALIZEDTEXT("en-US", "TrustList");
+    UA_Server_addObjectNode(server, UA_NODEID_NUMERIC(ns_index, 616),
+                            defaultApplicationGroup,
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                            UA_QUALIFIEDNAME(0, "TrustList"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_TRUSTLISTTYPE), /* this refers to the object type identifier */
+                            trustlist, NULL, NULL);
+
+   UA_Server_addNode_finish(server, defaultApplicationGroup);
+
+   UA_Server_setMethodNode_callback(server, UA_NODEID_NUMERIC(0, 11580), &openMethodCallback);
+   UA_Server_setMethodNode_callback(server, UA_NODEID_NUMERIC(0, 11583), &closeMethodCallback);
+   addReadTrustList(server, ns_index, UA_NODEID_NUMERIC(ns_index, 616));
+
 }
 
 
@@ -948,7 +1067,7 @@ UA_StatusCode GDS_InitNamespace(UA_Server *server) {
     //Part 12, page 14
     addDirectoryType(server, ns_index);
 
-    //Part12, page 31
+    //Part 12, page 31
     addCertificateDirectoryType(server, ns_index);
 
     createCertificateDirectoryObject(server, ns_index);

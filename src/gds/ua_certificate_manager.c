@@ -23,6 +23,7 @@
                         return errorcode; \
                     }
 
+#define UA_GDS_READ_MODE 0x01
 
 static
 void delete_CertificateManager_entry(gds_cm_entry *newEntry){
@@ -103,12 +104,119 @@ GDS_GetTrustList(UA_Server *server,
         return ret;
     }
 
-    *trustListId = cg->trustListId;
     gds_cm_tl_entry *newEntry = (gds_cm_tl_entry *)UA_calloc(1, sizeof(gds_cm_tl_entry));
     UA_GDS_CM_CHECK_MALLOC(newEntry);
     newEntry->sessionId = *sessionId;
+    newEntry->cg = cg;
     LIST_INSERT_HEAD(&server->certificateManager.gds_cm_trustList, newEntry, pointers);
-    server->certificateManager.trustListCounter++;
+
+    *trustListId = cg->trustListId;
+
+    return ret;
+}
+
+UA_StatusCode
+GDS_OpenTrustList(UA_Server *server,
+                  const UA_NodeId *sessionId,
+                  const UA_NodeId *objectId,
+                  UA_Byte  *mode,
+                  UA_UInt32 *fileHandle) {
+    UA_StatusCode ret = UA_STATUSCODE_GOOD;
+    //Just reading is supported at the moment
+    if (*mode != UA_GDS_READ_MODE){
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    gds_cm_tl_entry *gds_tl, *gds_tl_tmp;
+    UA_Boolean validCall = UA_FALSE;
+    LIST_FOREACH_SAFE(gds_tl, &server->certificateManager.gds_cm_trustList, pointers, gds_tl_tmp) {
+       if (UA_NodeId_equal(&gds_tl->sessionId, sessionId)
+           && UA_NodeId_equal(&gds_tl->cg->trustListId, objectId)){
+           validCall = UA_TRUE;
+           break;
+       }
+    }
+
+    if (!validCall) {
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    if (gds_tl->fileHandle){ //file is already open
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    GDS_CA *ca = gds_tl->cg->ca;
+    ca->getTrustList(ca, &gds_tl->trustList);
+
+    *fileHandle = 1; //represents the position in the file (part 5, p. 100)
+    gds_tl->fileHandle = *fileHandle;
+    gds_tl->isOpen = UA_TRUE;
+
+    return ret;
+}
+
+UA_StatusCode
+GDS_ReadTrustList(UA_Server *server,
+                  const UA_NodeId *sessionId,
+                  const UA_NodeId *trustListNodeId,
+                  UA_UInt32 *fileHandle,
+                  UA_Int32 *length,
+                  UA_TrustListDataType *trustList) {
+
+    UA_StatusCode ret = UA_STATUSCODE_GOOD;
+
+
+    if (UA_NodeId_equal(sessionId, &UA_NODEID_NULL)
+        || UA_NodeId_equal(trustListNodeId, &UA_NODEID_NULL)) {
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    gds_cm_tl_entry *gds_tl, *gds_tl_tmp;
+    UA_Boolean validCall = UA_FALSE;
+    LIST_FOREACH_SAFE(gds_tl, &server->certificateManager.gds_cm_trustList, pointers, gds_tl_tmp) {
+        if (UA_NodeId_equal(&gds_tl->sessionId, sessionId)
+            && UA_NodeId_equal(&gds_tl->cg->trustListId, trustListNodeId)
+            && *fileHandle == gds_tl->fileHandle
+            && gds_tl->isOpen){
+            validCall = UA_TRUE;
+            break;
+        }
+    }
+
+    if (!validCall) {
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    memcpy(trustList, &gds_tl->trustList, sizeof(UA_TrustListDataType));
+
+    return  ret;
+}
+
+UA_StatusCode
+GDS_CloseTrustList(UA_Server *server,
+                  const UA_NodeId *sessionId,
+                  const UA_NodeId *objectId,
+                  UA_UInt32 *fileHandle) {
+    UA_StatusCode ret = UA_STATUSCODE_GOOD;
+
+    gds_cm_tl_entry *gds_tl, *gds_tl_tmp;
+    UA_Boolean validCall = UA_FALSE;
+    LIST_FOREACH_SAFE(gds_tl, &server->certificateManager.gds_cm_trustList, pointers, gds_tl_tmp) {
+        if (UA_NodeId_equal(&gds_tl->sessionId, sessionId)
+            && UA_NodeId_equal(&gds_tl->cg->trustListId, objectId)
+            && (*fileHandle == gds_tl->fileHandle)){
+            validCall = UA_TRUE;
+            break;
+        }
+    }
+
+    if (!validCall) {
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    LIST_REMOVE(gds_tl, pointers);
+    UA_TrustListDataType_deleteMembers(&gds_tl->trustList);
+    UA_free(gds_tl);
 
     return ret;
 }
@@ -279,10 +387,8 @@ GDS_CertificateManager_close(UA_Server *server){
     gds_cm_tl_entry *gds_tl, *gds_tl_tmp;
     LIST_FOREACH_SAFE(gds_tl, &server->certificateManager.gds_cm_trustList, pointers, gds_tl_tmp) {
         LIST_REMOVE(gds_tl, pointers);
-        printf("InININININ");
         UA_TrustListDataType_deleteMembers(&gds_tl->trustList);
         //evtl tl noch freigeben
-        server->certificateManager.trustListCounter--;
         UA_free(gds_tl);
     }
     return UA_STATUSCODE_GOOD;
@@ -294,7 +400,6 @@ GDS_CertificateManager_init(UA_Server *server) {
     LIST_INIT(&server->certificateManager.gds_cm_list);
     server->certificateManager.counter = 0;
     LIST_INIT(&server->certificateManager.gds_cm_trustList);
-    server->certificateManager.trustListCounter = 0;
     return UA_STATUSCODE_GOOD;
 }
 

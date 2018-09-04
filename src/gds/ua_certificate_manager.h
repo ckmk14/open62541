@@ -33,6 +33,7 @@ typedef struct gds_cm_tl_entry {
     LIST_ENTRY(gds_cm_tl_entry) pointers;
     UA_TrustListDataType trustList;
     UA_NodeId sessionId;
+    GDS_CertificateGroup *cg;
     UA_UInt32 fileHandle;
     UA_Boolean isOpen;
 } gds_cm_tl_entry;
@@ -41,7 +42,6 @@ typedef struct{
     LIST_HEAD(gds_cm__list, gds_cm_entry) gds_cm_list;
     size_t counter;
     LIST_HEAD(gds_cm__tl, gds_cm_tl_entry) gds_cm_trustList;
-    size_t trustListCounter;
 } GDS_CertificateManager;
 
 UA_StatusCode
@@ -88,6 +88,27 @@ GDS_GetCertificateGroups(UA_Server *server,
                          UA_NodeId *applicationId,
                          size_t *outputSize,
                          UA_NodeId **certificateGroupIds);
+
+UA_StatusCode
+GDS_OpenTrustList(UA_Server *server,
+                  const UA_NodeId *sessionId,
+                  const UA_NodeId *objectId,
+                  UA_Byte  *mode,
+                  UA_UInt32 *fileHandle);
+
+UA_StatusCode
+GDS_ReadTrustList(UA_Server *server,
+                  const UA_NodeId *sessionId,
+                  const UA_NodeId *trustListNodeId,
+                  UA_UInt32 *fileHandle,
+                  UA_Int32 *length,
+                  UA_TrustListDataType *trustList);
+
+UA_StatusCode
+GDS_CloseTrustList(UA_Server *server,
+                   const UA_NodeId *sessionId,
+                   const UA_NodeId *objectId,
+                   UA_UInt32 *fileHandle);
 
 UA_StatusCode
 GDS_CertificateManager_close(UA_Server *server);
