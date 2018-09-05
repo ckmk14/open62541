@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <open62541.h>
-#include "open62541.h"
+#include "common.h"
 
 UA_Logger logger = UA_Log_Stdout;
 UA_Boolean running = true;
@@ -339,7 +339,7 @@ UA_StatusCode call_closeTrustList(UA_Client *client,
 
 }
 
-
+/*
 static
 UA_StatusCode call_readTrustList(UA_Client *client,
                                  UA_UInt32 *fileHandle,
@@ -386,17 +386,88 @@ UA_StatusCode call_readTrustList(UA_Client *client,
             FILE *f = fopen("/home/kocybi/ca.der", "w");
             fwrite(tmp->trustedCertificates[0].data, tmp->trustedCertificates[0].length, 1, f);
             fclose(f);
-/*
-            FILE *f2 = fopen("/home/kocybi/tl2.der", "w");
-            fwrite(tl->trustedCertificates[1].data, tl->trustedCertificates[1].length, 1, f2);
-            fclose(f2);
-*/
+
+         //   FILE *f2 = fopen("/home/kocybi/tl2.der", "w");
+         //   fwrite(tl->trustedCertificates[1].data, tl->trustedCertificates[1].length, 1, f2);
+        //    fclose(f2);
+
 
             FILE *f3 = fopen("/home/kocybi/ca.crl", "w");
             fwrite(tmp->trustedCrls[0].data, tmp->trustedCrls[0].length, 1, f3);
             fclose(f3);
 
             UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+        }
+    } else {
+        printf("Method call was unsuccessful, and %x returned values available.\n", retval);
+    }
+
+    for(size_t i = 0; i < 2; i++)
+        UA_Variant_deleteMembers(&input[i]);
+
+    return retval;
+
+}
+ */
+
+static
+UA_StatusCode call_readTrustList_add_UAExpert(UA_Client *client,
+                                 UA_UInt32 *fileHandle,
+                                 UA_Int32 *length,
+                                 UA_TrustListDataType *trustList) {
+
+    UA_Variant input[2];
+    UA_Variant_setScalarCopy(&input[0], fileHandle, &UA_TYPES[UA_TYPES_UINT32]);
+    UA_Variant_setScalarCopy(&input[1], length, &UA_TYPES[UA_TYPES_INT32]);
+    size_t outputSize;
+    UA_Variant *output;;
+    UA_StatusCode retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 616),
+                                          UA_NODEID_NUMERIC(0, 11585), 2, input, &outputSize, &output);
+    if(retval == UA_STATUSCODE_GOOD) {
+        UA_TrustListDataType *tmp =  (UA_TrustListDataType *) output->data;
+        if (tmp != NULL) {
+            printf("Received TrustList (TrustListSize: %lu, TrustedCRLSize: %lu)\n",
+                   tmp->trustedCertificatesSize, tmp->trustedCrlsSize);
+            size_t index = 0;
+            trustList->trustedCertificatesSize = tmp->trustedCertificatesSize + 1;
+            trustList->trustedCertificates =
+                    (UA_ByteString *) UA_malloc (sizeof(UA_ByteString) * (tmp->trustedCertificatesSize + 1));
+            while (index < tmp->trustedCertificatesSize) {
+                UA_ByteString_allocBuffer(&trustList->trustedCertificates[index],
+                                          tmp->trustedCertificates[index].length);
+                memcpy(trustList->trustedCertificates[index].data,
+                       tmp->trustedCertificates[index].data,
+                       tmp->trustedCertificates[index].length);
+                index++;
+            }
+            UA_ByteString certificate =
+                    loadFile("/home/kocybi/.config/unifiedautomation/uaexpert/PKI/own/certs/uaexpert.der");
+            UA_ByteString_allocBuffer(&trustList->trustedCertificates[index],
+                                      certificate.length);
+            memcpy(trustList->trustedCertificates[index].data, certificate.data, certificate.length);
+            UA_ByteString_deleteMembers(&certificate);
+            index = 0;
+            trustList->trustedCrlsSize = tmp->trustedCrlsSize;
+            trustList->trustedCrls =
+                    (UA_ByteString *) UA_malloc (sizeof(UA_ByteString) * tmp->trustedCrlsSize);
+            while (index < tmp->trustedCrlsSize) {
+                UA_ByteString_allocBuffer(&trustList->trustedCrls[index],
+                                          tmp->trustedCrls[index].length);
+                memcpy(trustList->trustedCrls[index].data,
+                       tmp->trustedCrls[index].data,
+                       tmp->trustedCrls[index].length);
+                index++;
+            }
+
+            FILE *f = fopen("/home/kocybi/.config/unifiedautomation/uaexpert/PKI/trusted/certs/ca.der", "w");
+            fwrite(tmp->trustedCertificates[0].data, tmp->trustedCertificates[0].length, 1, f);
+            fclose(f);
+            FILE *f3 = fopen("/home/kocybi/.config/unifiedautomation/uaexpert/PKI/trusted/crl/ca.crl", "w");
+            fwrite(tmp->trustedCrls[0].data, tmp->trustedCrls[0].length, 1, f3);
+            fclose(f3);
+
+            UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+
         }
     } else {
         printf("Method call was unsuccessful, and %x returned values available.\n", retval);
@@ -466,7 +537,8 @@ int main(int argc, char **argv) {
 
         call_getTrustList(client, &appId, certificateGroupId, &trustListId);
         call_openTrustList(client, &mode, &filehandle);
-        call_readTrustList(client, &filehandle, &tmp_length, &tl);
+       // call_readTrustList(client, &filehandle, &tmp_length, &tl);
+        call_readTrustList_add_UAExpert(client, &filehandle, &tmp_length, &tl);
         call_closeTrustList(client, &filehandle);
 
         UA_NodeId requestId;
