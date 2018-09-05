@@ -339,11 +339,12 @@ UA_StatusCode call_closeTrustList(UA_Client *client,
 
 }
 
+
 static
 UA_StatusCode call_readTrustList(UA_Client *client,
                                  UA_UInt32 *fileHandle,
                                  UA_Int32 *length,
-                                 UA_TrustListDataType *tl) {
+                                 UA_TrustListDataType *trustList) {
 
     UA_Variant input[2];
     UA_Variant_setScalarCopy(&input[0], fileHandle, &UA_TYPES[UA_TYPES_UINT32]);
@@ -351,27 +352,51 @@ UA_StatusCode call_readTrustList(UA_Client *client,
     size_t outputSize;
     UA_Variant *output;;
     UA_StatusCode retval = UA_Client_call(client, UA_NODEID_NUMERIC(2, 616),
-                                          UA_NODEID_NUMERIC(2, 999), 2, input, &outputSize, &output);
+                                          UA_NODEID_NUMERIC(0, 11585), 2, input, &outputSize, &output);
     if(retval == UA_STATUSCODE_GOOD) {
-        tl =  (UA_TrustListDataType *) output->data;
-        if (tl != NULL) {
+        UA_TrustListDataType *tmp =  (UA_TrustListDataType *) output->data;
+        if (tmp != NULL) {
+            printf("Received TrustList (TrustListSize: %lu, TrustedCRLSize: %lu)\n",
+                   tmp->trustedCertificatesSize, tmp->trustedCrlsSize);
+            size_t index = 0;
+            trustList->trustedCertificatesSize = tmp->trustedCertificatesSize;
+            trustList->trustedCertificates =
+                    (UA_ByteString *) UA_malloc (sizeof(UA_ByteString) * tmp->trustedCertificatesSize);
+            while (index < tmp->trustedCertificatesSize) {
+                UA_ByteString_allocBuffer(&trustList->trustedCertificates[index],
+                                          tmp->trustedCertificates[index].length);
+                memcpy(trustList->trustedCertificates[index].data,
+                       tmp->trustedCertificates[index].data,
+                       tmp->trustedCertificates[index].length);
+                index++;
+            }
+            index = 0;
+            trustList->trustedCrlsSize = tmp->trustedCrlsSize;
+            trustList->trustedCrls =
+                    (UA_ByteString *) UA_malloc (sizeof(UA_ByteString) * tmp->trustedCrlsSize);
+            while (index < tmp->trustedCrlsSize) {
+                UA_ByteString_allocBuffer(&trustList->trustedCrls[index],
+                                          tmp->trustedCrls[index].length);
+                memcpy(trustList->trustedCrls[index].data,
+                       tmp->trustedCrls[index].data,
+                       tmp->trustedCrls[index].length);
+                index++;
+            }
 
-            printf("\nTrustListSize: %lu\n", tl->trustedCertificatesSize);
-            printf("\nTrustedCRLsSize: %lu\n", tl->trustedCrlsSize);
-            FILE *f = fopen("/home/kocybi/tl1.der", "w");
-            fwrite(tl->trustedCertificates[0].data, tl->trustedCertificates[0].length, 1, f);
+            FILE *f = fopen("/home/kocybi/ca.der", "w");
+            fwrite(tmp->trustedCertificates[0].data, tmp->trustedCertificates[0].length, 1, f);
             fclose(f);
-
-            FILE *f2 = fopen("/home/kocybi/tl123.der", "w");
+/*
+            FILE *f2 = fopen("/home/kocybi/tl2.der", "w");
             fwrite(tl->trustedCertificates[1].data, tl->trustedCertificates[1].length, 1, f2);
             fclose(f2);
+*/
 
-            FILE *f3 = fopen("/home/kocybi/tl3.der", "w");
-            fwrite(tl->trustedCrls[0].data, tl->trustedCrls[0].length, 1, f3);
+            FILE *f3 = fopen("/home/kocybi/ca.crl", "w");
+            fwrite(tmp->trustedCrls[0].data, tmp->trustedCrls[0].length, 1, f3);
             fclose(f3);
 
-
-            printf("Ja");
+            UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
         }
     } else {
         printf("Method call was unsuccessful, and %x returned values available.\n", retval);
@@ -383,7 +408,6 @@ UA_StatusCode call_readTrustList(UA_Client *client,
     return retval;
 
 }
-
 
 int main(int argc, char **argv) {
     signal(SIGINT, stopHandler);
@@ -434,13 +458,14 @@ int main(int argc, char **argv) {
         }
 
         UA_NodeId trustListId;
-        call_getTrustList(client, &appId, certificateGroupId, &trustListId);
         UA_UInt32 filehandle;
         UA_Byte mode = 0x01; //ReadMode (Part 5,p.100).
-        call_openTrustList(client, &mode, &filehandle);
-
         UA_TrustListDataType tl;
+        UA_TrustListDataType_init(&tl);
         UA_Int32  tmp_length = 0;
+
+        call_getTrustList(client, &appId, certificateGroupId, &trustListId);
+        call_openTrustList(client, &mode, &filehandle);
         call_readTrustList(client, &filehandle, &tmp_length, &tl);
         call_closeTrustList(client, &filehandle);
 
@@ -463,37 +488,24 @@ int main(int argc, char **argv) {
         if (!UA_NodeId_isNull(&requestId)){
             retval = call_finishRequest(client, &appId, &requestId, &certificate, &privateKey, &issuerCertificate);
             if (retval == UA_STATUSCODE_GOOD) {
-                FILE *f = fopen("/home/kocybi/aaa.der", "w");
-                fwrite(certificate.data, certificate.length, 1, f);
-                fclose(f);
-
-                FILE *f2 = fopen("/home/kocybi/aaa2.der", "w");
-                fwrite(privateKey.data, privateKey.length, 1, f2);
-                fclose(f2);
-
-                FILE *f3 = fopen("/home/kocybi/aaa3.der", "w");
-                fwrite(issuerCertificate.data, issuerCertificate.length, 1, f3);
-                fclose(f3);
-
-                /*
-                size_t trustListSize = 0;
-                UA_STACKARRAY(UA_ByteString, trustList, trustListSize);
-                UA_ByteString *revocationList = NULL;
-                size_t revocationListSize = 0;
+              //  size_t trustListSize = 0;
+              //  UA_STACKARRAY(UA_ByteString, trustList, trustListSize);
+              //  UA_ByteString *revocationList = NULL;
+              //  size_t revocationListSize = 0;
                 UA_ServerConfig *config =
                         UA_ServerConfig_new_basic256sha256(4840, &certificate, &privateKey,
-                                                           trustList, 0,
-                                                           revocationList, revocationListSize);
+                                                           tl.trustedCertificates, tl.trustedCertificatesSize,
+                                                           tl.trustedCrls, tl.trustedCrlsSize);
                 UA_Server *server = UA_Server_new(config);
                 retval = UA_Server_run(server, &running);
                 UA_Server_delete(server);
                 UA_ServerConfig_delete(config);
-                                                           */
+
                 UA_ByteString_deleteMembers(&certificate);
                 UA_ByteString_deleteMembers(&privateKey);
                 UA_ByteString_deleteMembers(&issuerCertificate);
                 UA_free(certificateGroupId);
-
+                UA_TrustListDataType_deleteMembers(&tl);
             }
         }
     }

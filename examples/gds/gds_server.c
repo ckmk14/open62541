@@ -23,25 +23,8 @@ int main(int argc, char* argv[]) {
 
     UA_ServerConfig *config = UA_ServerConfig_new_minimal(4841, NULL);;
 
-
     GDS_CA *ca = config->gds_certificateGroups[0].ca;
     ca->addCertificateToTrustList(ca, &certificate, UA_TRUE);
-
-
- //   UA_TrustListDataType list;
- //   UA_TrustListDataType_init(&list);
- //   ca->getTrustList(ca, &list);
-
- //   UA_TrustListDataType_deleteMembers(&list);
-
-
-
-    //  char a[1] = {1};
-
-  //  printf("\n%lu\n", sizeof(a));
-    //a[0] = 7;
-  //  ca->addCertificatetoCRL(ca, 1, a);
-
 
     config->applicationDescription.applicationType = UA_APPLICATIONTYPE_DISCOVERYSERVER;
     UA_String_deleteMembers(&config->applicationDescription.applicationUri);

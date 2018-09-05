@@ -23,7 +23,7 @@
                         return errorcode; \
                     }
 
-#define UA_GDS_READ_MODE 0x01
+#define UA_GDS_READ_MODE (0x01<<0)
 
 static
 void delete_CertificateManager_entry(gds_cm_entry *newEntry){
