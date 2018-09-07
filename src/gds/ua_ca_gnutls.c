@@ -30,8 +30,8 @@
 typedef struct {
     gnutls_x509_crt_t ca_crt;
     gnutls_x509_privkey_t ca_key;
+    size_t serialNumberPosition;
     size_t serialNumberSize;
-    size_t serialNumberPointer;
     char *serialNumber;
     int trustListSize;
     gnutls_x509_trust_list_t trustList;
@@ -39,7 +39,7 @@ typedef struct {
 } CaContext;
 
 /*
-static void printCa_gnutls(GDS_CA *scg, const char *loc) {
+void printCa_gnutls(GDS_CA *scg, const char *loc) {
     CaContext *cc = (CaContext *) scg->context;
     gnutls_datum_t crtdata = {0};
     gnutls_x509_crt_export(cc->ca_crt, GNUTLS_X509_FMT_DER, NULL, (size_t*)&crtdata.size);
@@ -294,17 +294,26 @@ UA_StatusCode csr_gnutls(GDS_CA *scg,
     //    gnuErr = gnutls_x509_crt_set_dn (cert, bufferDN, NULL);
 
     //Increase the serial number
-    if (cc->serialNumber[cc->serialNumberPointer] < CHAR_MAX) {
-        cc->serialNumber[cc->serialNumberPointer]++;
-    }
-    else if (cc->serialNumberPointer > 0){
-        cc->serialNumber[--cc->serialNumberPointer]++;
+    if (cc->serialNumber[cc->serialNumberPosition] < CHAR_MAX) {
+        cc->serialNumber[cc->serialNumberPosition]++;
     }
     else {
-        UA_LOG_WARNING(scg->logger, UA_LOGCATEGORY_SERVER, "Serial number overflow");
-        return UA_STATUSCODE_BADINTERNALERROR;
+        cc->serialNumberPosition--;
+        for (int index = (int) cc->serialNumberPosition; index >= 0; index--) {
+            if (cc->serialNumber[index] < CHAR_MAX) {
+                for (int i = index + 1; i < (int) cc->serialNumberSize; i++) {
+                    cc->serialNumber[i] = 0;
+                }
+                cc->serialNumber[index]++;
+                cc->serialNumberPosition = cc->serialNumberSize - 1;
+                break;
+            }
+        }
+        if (cc->serialNumberPosition != cc->serialNumberSize - 1){
+            UA_LOG_WARNING(scg->logger, UA_LOGCATEGORY_SERVER, "Serial number overflow");
+            return UA_STATUSCODE_BADINTERNALERROR;
+        }
     }
-
     gnuErr = gnutls_x509_crt_set_serial(cert, cc->serialNumber, cc->serialNumberSize);
     UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
 
@@ -464,18 +473,26 @@ UA_StatusCode createNewKeyPair_gnutls (GDS_CA *scg,
     if(ret != UA_STATUSCODE_GOOD)
         goto deinit_create;
 
-    //Increase the serial number
-    if (cc->serialNumber[cc->serialNumberPointer] < CHAR_MAX) {
-        cc->serialNumber[cc->serialNumberPointer]++;
-    }
-    else if (cc->serialNumberPointer > 0){
-        cc->serialNumber[--cc->serialNumberPointer]++;
+    if (cc->serialNumber[cc->serialNumberPosition] < CHAR_MAX) {
+        cc->serialNumber[cc->serialNumberPosition]++;
     }
     else {
-        UA_LOG_WARNING(scg->logger, UA_LOGCATEGORY_SERVER, "Serial number overflow");
-        return UA_STATUSCODE_BADINTERNALERROR;
+       cc->serialNumberPosition--;
+       for (int index = (int) cc->serialNumberPosition; index >= 0; index--) {
+           if (cc->serialNumber[index] < CHAR_MAX) {
+               for (int i = index + 1; i < (int) cc->serialNumberSize; i++) {
+                   cc->serialNumber[i] = 0;
+               }
+               cc->serialNumber[index]++;
+               cc->serialNumberPosition = cc->serialNumberSize - 1;
+               break;
+           }
+       }
+       if (cc->serialNumberPosition != cc->serialNumberSize - 1){
+           UA_LOG_WARNING(scg->logger, UA_LOGCATEGORY_SERVER, "Serial number overflow");
+           return UA_STATUSCODE_BADINTERNALERROR;
+       }
     }
-
     gnuErr = gnutls_x509_crt_set_serial(cert, cc->serialNumber, cc->serialNumberSize);
     UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
 
@@ -802,7 +819,7 @@ UA_StatusCode create_CACertificate(GDS_CA *scg,
 
     cc->serialNumberSize = serialNumberSize;
     cc->serialNumber = (char *) UA_malloc(serialNumberSize * sizeof(char));
-    cc->serialNumberPointer = serialNumberSize - 1;
+    cc->serialNumberPosition = serialNumberSize - 1;
     memcpy(cc->serialNumber, serialNumber, serialNumberSize);
     gnuErr = gnutls_x509_crt_set_serial(cc->ca_crt, cc->serialNumber, cc->serialNumberSize);
     UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED);

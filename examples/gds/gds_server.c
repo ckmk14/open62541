@@ -26,6 +26,7 @@ int main(int argc, char* argv[]) {
     GDS_CA *ca = config->gds_certificateGroups[0].ca;
     ca->addCertificateToTrustList(ca, &certificate, UA_TRUE);
 
+
     config->applicationDescription.applicationType = UA_APPLICATIONTYPE_DISCOVERYSERVER;
     UA_String_deleteMembers(&config->applicationDescription.applicationUri);
     config->applicationDescription.applicationUri =
