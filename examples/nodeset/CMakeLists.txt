@@ -31,7 +31,7 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/example_nodeset.c
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/example_nodeset_ids.h
                    PRE_BUILD
                    COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_nodeid_header.py
-                   ${PROJECT_SOURCE_DIR}/examples/nodeset/server_nodeset.csv  ${PROJECT_BINARY_DIR}/src_generated/example_nodeset_ids EXAMPLE_NS
+                   --type-csv=${PROJECT_SOURCE_DIR}/examples/nodeset/server_nodeset.csv  ${PROJECT_BINARY_DIR}/src_generated/example_nodeset_ids EXAMPLE_NS
                    DEPENDS ${PROJECT_SOURCE_DIR}/tools/generate_nodeid_header.py
                    ${PROJECT_SOURCE_DIR}/examples/nodeset/server_nodeset.csv)
 

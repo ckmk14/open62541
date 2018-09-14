@@ -31,7 +31,7 @@ set(LIB_INSTALL_DIR lib CACHE PATH "Installation path of libraries")
 # Set OPEN62541_VER_COMMIT
 if(GIT_FOUND)
     execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --tags
-                    RESULT_VARIABLE res_var OUTPUT_VARIABLE GIT_COM_ID WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+            RESULT_VARIABLE res_var OUTPUT_VARIABLE GIT_COM_ID WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     if(${res_var} EQUAL 0)
         string(REPLACE "\n" "" OPEN62541_VER_COMMIT ${GIT_COM_ID} )
     endif()
@@ -98,18 +98,18 @@ GET_PROPERTY(ua_architecture_headers_beginning GLOBAL PROPERTY UA_ARCHITECTURE_H
 GET_PROPERTY(ua_architecture_sources GLOBAL PROPERTY UA_ARCHITECTURE_SOURCES)
 
 set(ua_architecture_sources ${ua_architecture_sources}
-            ${PROJECT_SOURCE_DIR}/arch/ua_network_tcp.c
-)
+        ${PROJECT_SOURCE_DIR}/arch/ua_network_tcp.c
+        )
 
 set(ua_architecture_headers ${ua_architecture_headers}
-            ${PROJECT_SOURCE_DIR}/arch/ua_network_tcp.h
-            ${PROJECT_SOURCE_DIR}/arch/ua_architecture_functions.h
-)
+        ${PROJECT_SOURCE_DIR}/arch/ua_network_tcp.h
+        ${PROJECT_SOURCE_DIR}/arch/ua_architecture_functions.h
+        )
 
 
 
 if(${UA_ARCHITECTURE} STREQUAL "None")
-  message(FATAL_ERROR "No architecture was selected. Please select the architecture of your target platform")
+    message(FATAL_ERROR "No architecture was selected. Please select the architecture of your target platform")
 endif(${UA_ARCHITECTURE} STREQUAL "None")
 
 # Options
@@ -147,10 +147,10 @@ if((UA_ENABLE_SUBSCRIPTIONS_EVENTS) AND (NOT (UA_ENABLE_SUBSCRIPTIONS AND UA_NAM
 endif()
 
 if(UA_ENABLE_COVERAGE)
-  set(CMAKE_BUILD_TYPE DEBUG)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fprofile-arcs -ftest-coverage")
+    set(CMAKE_BUILD_TYPE DEBUG)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fprofile-arcs -ftest-coverage")
 endif()
 
 if(UA_BUILD_FUZZING OR UA_BUILD_OSS_FUZZ OR UA_BUILD_FUZZING_CORPUS)
@@ -186,7 +186,7 @@ option(UA_ENABLE_PUBSUB_INFORMATIONMODEL "Enable PubSub information model twin" 
 mark_as_advanced(UA_ENABLE_PUBSUB_INFORMATIONMODEL)
 if(UA_ENABLE_PUBSUB_INFORMATIONMODEL)
     if(NOT UA_ENABLE_PUBSUB)
-    message(FATAL_ERROR "PubSub information model representation cannot be used with disabled PubSub function.")
+        message(FATAL_ERROR "PubSub information model representation cannot be used with disabled PubSub function.")
     endif()
 endif()
 
@@ -223,7 +223,7 @@ option(UA_ENABLE_NONSTANDARD_UDP "Enable udp extension (non-standard)" OFF)
 mark_as_advanced(UA_ENABLE_NONSTANDARD_UDP)
 
 option(UA_ENABLE_UNIT_TEST_FAILURE_HOOKS
-       "Add hooks to force failure modes for additional unit tests. Not for production use!" OFF)
+        "Add hooks to force failure modes for additional unit tests. Not for production use!" OFF)
 mark_as_advanced(UA_ENABLE_UNIT_TEST_FAILURE_HOOKS)
 
 set(UA_VALGRIND_INTERACTIVE_INTERVAL 1000 CACHE STRING "The number of iterations to wait before creating the next dump")
@@ -267,10 +267,10 @@ mark_as_advanced(UA_BUILD_SELFSIGNED_CERTIFICATE)
 # Building shared libs (dll, so). This option is written into ua_config.h.
 set(UA_DYNAMIC_LINKING OFF)
 if(BUILD_SHARED_LIBS)
-  set(UA_DYNAMIC_LINKING ON)
-  if (UA_ENABLE_DISCOVERY_MULTICAST)
-      set(MDNSD_DYNAMIC_LINKING ON)
-  endif()
+    set(UA_DYNAMIC_LINKING ON)
+    if (UA_ENABLE_DISCOVERY_MULTICAST)
+        set(MDNSD_DYNAMIC_LINKING ON)
+    endif()
 endif()
 
 ######################
@@ -310,19 +310,19 @@ endif()
 if(NOT UA_COMPILE_AS_CXX AND (CMAKE_COMPILER_IS_GNUCC OR "x${CMAKE_C_COMPILER_ID}" STREQUAL "xClang"))
     # Compiler
     add_definitions(-std=c99 -pipe
-                    -Wall -Wextra -Werror -Wpedantic
-                    -Wno-static-in-inline # clang doesn't like the use of static inline methods inside static inline methods
-                    -Wno-overlength-strings # may happen in the nodeset compiler when complex values are directly encoded
-                    -Wno-unused-parameter # some methods may require unused arguments to cast to a method pointer
-                    -Wmissing-prototypes -Wstrict-prototypes -Wredundant-decls
-                    -Wformat -Wformat-security -Wformat-nonliteral
-                    -Wuninitialized -Winit-self
-                    -Wcast-qual
-                    -Wstrict-overflow
-                    -Wnested-externs
-                    -Wmultichar
-                    -Wundef
-                    -Wc++-compat)
+            -Wall -Wextra -Werror -Wpedantic
+            -Wno-static-in-inline # clang doesn't like the use of static inline methods inside static inline methods
+            -Wno-overlength-strings # may happen in the nodeset compiler when complex values are directly encoded
+            -Wno-unused-parameter # some methods may require unused arguments to cast to a method pointer
+            -Wmissing-prototypes -Wstrict-prototypes -Wredundant-decls
+            -Wformat -Wformat-security -Wformat-nonliteral
+            -Wuninitialized -Winit-self
+            -Wcast-qual
+            -Wstrict-overflow
+            -Wnested-externs
+            -Wmultichar
+            -Wundef
+            -Wc++-compat)
 
     if(UA_ENABLE_AMALGAMATION)
         add_definitions(-Wno-unused-function)
@@ -342,7 +342,7 @@ if(NOT UA_COMPILE_AS_CXX AND (CMAKE_COMPILER_IS_GNUCC OR "x${CMAKE_C_COMPILER_ID
     # Strip release builds
     if(CMAKE_BUILD_TYPE STREQUAL "MinSizeRel" OR CMAKE_BUILD_TYPE STREQUAL "Release")
         add_definitions(-ffunction-sections -fdata-sections -fno-stack-protector -fno-unwind-tables
-                        -fno-asynchronous-unwind-tables -fno-math-errno -fmerge-all-constants -fno-ident)
+                -fno-asynchronous-unwind-tables -fno-math-errno -fmerge-all-constants -fno-ident)
         if(NOT OS9)
             set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -s")
             set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -s")
@@ -367,15 +367,15 @@ if(APPLE)
 endif()
 
 if(MSVC)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W3 /WX /w44996") # Compiler warnings, error on warning
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W3 /WX /w44996") # Compiler warnings, error on warning
 
-  if(UA_MSVC_FORCE_STATIC_CRT AND NOT BUILD_SHARED_LIBS)
-    set(CompilerFlags CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE CMAKE_C_FLAGS
-        CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE)
-    foreach(CompilerFlag ${CompilerFlags})
-      string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
-    endforeach()
-  endif()
+    if(UA_MSVC_FORCE_STATIC_CRT AND NOT BUILD_SHARED_LIBS)
+        set(CompilerFlags CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE CMAKE_C_FLAGS
+                CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE)
+        foreach(CompilerFlag ${CompilerFlags})
+            string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+        endforeach()
+    endif()
 endif()
 
 #########################
@@ -396,13 +396,13 @@ if(UA_ENABLE_DISCOVERY)
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/include
-                    ${PROJECT_SOURCE_DIR}/plugins
-                    ${PROJECT_SOURCE_DIR}/deps
-                    ${PROJECT_SOURCE_DIR}/src/pubsub
-                    ${PROJECT_SOURCE_DIR}/src/gds
-                    ${PROJECT_BINARY_DIR}
-                    ${PROJECT_BINARY_DIR}/src_generated
-                    ${MBEDTLS_INCLUDE_DIRS})
+        ${PROJECT_SOURCE_DIR}/plugins
+        ${PROJECT_SOURCE_DIR}/deps
+        ${PROJECT_SOURCE_DIR}/src/pubsub
+        ${PROJECT_SOURCE_DIR}/src/gds
+        ${PROJECT_BINARY_DIR}
+        ${PROJECT_BINARY_DIR}/src_generated
+        ${MBEDTLS_INCLUDE_DIRS})
 
 if(NOT "${UA_AMALGAMATION_ARCHITECUTRES}" STREQUAL "")
     set(exported_headers)
@@ -414,138 +414,138 @@ else()
 endif()
 
 set(exported_headers ${exported_headers}
-                     ${ua_architecture_headers_beginning}
-                     ${PROJECT_BINARY_DIR}/src_generated/ua_config.h
-                     ${PROJECT_SOURCE_DIR}/deps/ms_stdint.h
-                     ${PROJECT_BINARY_DIR}/src_generated/ua_statuscodes.h
-                     ${PROJECT_BINARY_DIR}/src_generated/ua_nodeids.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_constants.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_types.h
-                     ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated.h
-                     ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated_handling.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_util.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_server.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_log.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_network.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_access_control.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_pki.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_securitypolicy.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_server_pubsub.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_pubsub.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_ca.h
-                     ${PROJECT_SOURCE_DIR}/src/gds/ua_gds_ns.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_plugin_nodestore.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_server_config.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_client_config.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_client.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_client_highlevel.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_client_subscriptions.h
-                     ${PROJECT_SOURCE_DIR}/include/ua_client_highlevel_async.h)
+        ${ua_architecture_headers_beginning}
+        ${PROJECT_BINARY_DIR}/src_generated/ua_config.h
+        ${PROJECT_SOURCE_DIR}/deps/ms_stdint.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_statuscodes.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_nodeids.h
+        ${PROJECT_SOURCE_DIR}/include/ua_constants.h
+        ${PROJECT_SOURCE_DIR}/include/ua_types.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated_handling.h
+        ${PROJECT_SOURCE_DIR}/include/ua_util.h
+        ${PROJECT_SOURCE_DIR}/include/ua_server.h
+        ${PROJECT_SOURCE_DIR}/include/ua_plugin_log.h
+        ${PROJECT_SOURCE_DIR}/include/ua_plugin_network.h
+        ${PROJECT_SOURCE_DIR}/include/ua_plugin_access_control.h
+        ${PROJECT_SOURCE_DIR}/include/ua_plugin_pki.h
+        ${PROJECT_SOURCE_DIR}/include/ua_plugin_securitypolicy.h
+        ${PROJECT_SOURCE_DIR}/include/ua_server_pubsub.h
+        ${PROJECT_SOURCE_DIR}/include/ua_plugin_pubsub.h
+        ${PROJECT_SOURCE_DIR}/include/ua_plugin_ca.h
+        ${PROJECT_SOURCE_DIR}/src/gds/ua_gds_ns.h
+        ${PROJECT_SOURCE_DIR}/include/ua_plugin_nodestore.h
+        ${PROJECT_SOURCE_DIR}/include/ua_server_config.h
+        ${PROJECT_SOURCE_DIR}/include/ua_client_config.h
+        ${PROJECT_SOURCE_DIR}/include/ua_client.h
+        ${PROJECT_SOURCE_DIR}/include/ua_client_highlevel.h
+        ${PROJECT_SOURCE_DIR}/include/ua_client_subscriptions.h
+        ${PROJECT_SOURCE_DIR}/include/ua_client_highlevel_async.h)
 
 set(internal_headers ${PROJECT_SOURCE_DIR}/deps/queue.h
-                     ${PROJECT_SOURCE_DIR}/deps/pcg_basic.h
-                     ${PROJECT_SOURCE_DIR}/deps/libc_time.h
-                     ${PROJECT_SOURCE_DIR}/deps/base64.h
-                     ${PROJECT_SOURCE_DIR}/src/ua_util_internal.h
-                     ${PROJECT_SOURCE_DIR}/src/ua_types_encoding_binary.h
-                     ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated_encoding_binary.h
-                     ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated.h
-                     ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated_handling.h
-                     ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated_encoding_binary.h
-                     ${PROJECT_SOURCE_DIR}/src/ua_connection_internal.h
-                     ${PROJECT_SOURCE_DIR}/src/ua_securechannel.h
-                     ${PROJECT_SOURCE_DIR}/src/ua_timer.h
-                     ${PROJECT_SOURCE_DIR}/src/server/ua_session.h
-                     ${PROJECT_SOURCE_DIR}/src/server/ua_subscription.h
-                     ${PROJECT_SOURCE_DIR}/src/server/ua_session_manager.h
-                     ${PROJECT_SOURCE_DIR}/src/server/ua_securechannel_manager.h
-                     ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_networkmessage.h
-                     ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub.h
-                     ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_manager.h
-                     ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_ns0.h
-                     ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.h
-                     ${PROJECT_SOURCE_DIR}/src/gds/ua_certificate_manager.h
-                     ${PROJECT_SOURCE_DIR}/src/server/ua_server_internal.h
-                     ${PROJECT_SOURCE_DIR}/src/server/ua_services.h
-                     ${PROJECT_BINARY_DIR}/src_generated/ua_namespace0.h
-                     ${PROJECT_SOURCE_DIR}/src/client/ua_client_internal.h)
+        ${PROJECT_SOURCE_DIR}/deps/pcg_basic.h
+        ${PROJECT_SOURCE_DIR}/deps/libc_time.h
+        ${PROJECT_SOURCE_DIR}/deps/base64.h
+        ${PROJECT_SOURCE_DIR}/src/ua_util_internal.h
+        ${PROJECT_SOURCE_DIR}/src/ua_types_encoding_binary.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated_encoding_binary.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated_handling.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated_encoding_binary.h
+        ${PROJECT_SOURCE_DIR}/src/ua_connection_internal.h
+        ${PROJECT_SOURCE_DIR}/src/ua_securechannel.h
+        ${PROJECT_SOURCE_DIR}/src/ua_timer.h
+        ${PROJECT_SOURCE_DIR}/src/server/ua_session.h
+        ${PROJECT_SOURCE_DIR}/src/server/ua_subscription.h
+        ${PROJECT_SOURCE_DIR}/src/server/ua_session_manager.h
+        ${PROJECT_SOURCE_DIR}/src/server/ua_securechannel_manager.h
+        ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_networkmessage.h
+        ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub.h
+        ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_manager.h
+        ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_ns0.h
+        ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.h
+        ${PROJECT_SOURCE_DIR}/src/gds/ua_certificate_manager.h
+        ${PROJECT_SOURCE_DIR}/src/server/ua_server_internal.h
+        ${PROJECT_SOURCE_DIR}/src/server/ua_services.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_namespace0.h
+        ${PROJECT_SOURCE_DIR}/src/client/ua_client_internal.h)
 
 # TODO: make client optional
 set(lib_sources ${PROJECT_SOURCE_DIR}/src/ua_types.c
-                ${PROJECT_SOURCE_DIR}/src/ua_types_encoding_binary.c
-                ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated.c
-                ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated.c
-                ${PROJECT_BINARY_DIR}/src_generated/ua_statuscodes.c
-                ${PROJECT_SOURCE_DIR}/src/ua_util.c
-                ${PROJECT_SOURCE_DIR}/src/ua_timer.c
-                ${PROJECT_SOURCE_DIR}/src/ua_connection.c
-                ${PROJECT_SOURCE_DIR}/src/ua_securechannel.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_session.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_nodes.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_server.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_server_ns0.c
-                ${PROJECT_BINARY_DIR}/src_generated/ua_namespace0.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_server_binary.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_server_utils.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_server_worker.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_server_discovery.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_securechannel_manager.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_session_manager.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_subscription.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_subscription_datachange.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_subscription_events.c
-                ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_networkmessage.c
-                ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub.c
-                ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_manager.c
-                ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_ns0.c
-                ${PROJECT_SOURCE_DIR}/src/gds/ua_gds_ns.c
-                ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.c
-                ${PROJECT_SOURCE_DIR}/src/gds/ua_certificate_manager.c
-                # services
-                ${PROJECT_SOURCE_DIR}/src/server/ua_services_view.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_services_call.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_services_session.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_services_attribute.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_services_discovery.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_services_subscription.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_services_securechannel.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_services_nodemanagement.c
-                ${PROJECT_SOURCE_DIR}/src/server/ua_services_discovery_multicast.c
-                # client
-                ${PROJECT_SOURCE_DIR}/src/client/ua_client.c
-                ${PROJECT_SOURCE_DIR}/src/client/ua_client_connect.c
-                ${PROJECT_SOURCE_DIR}/src/client/ua_client_connect_async.c
-                ${PROJECT_SOURCE_DIR}/src/client/ua_client_discovery.c
-                ${PROJECT_SOURCE_DIR}/src/client/ua_client_highlevel.c
-                ${PROJECT_SOURCE_DIR}/src/client/ua_client_subscriptions.c
-                ${PROJECT_SOURCE_DIR}/src/client/ua_client_worker.c
+        ${PROJECT_SOURCE_DIR}/src/ua_types_encoding_binary.c
+        ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated.c
+        ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated.c
+        ${PROJECT_BINARY_DIR}/src_generated/ua_statuscodes.c
+        ${PROJECT_SOURCE_DIR}/src/ua_util.c
+        ${PROJECT_SOURCE_DIR}/src/ua_timer.c
+        ${PROJECT_SOURCE_DIR}/src/ua_connection.c
+        ${PROJECT_SOURCE_DIR}/src/ua_securechannel.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_session.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_nodes.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_server.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_server_ns0.c
+        ${PROJECT_BINARY_DIR}/src_generated/ua_namespace0.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_server_binary.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_server_utils.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_server_worker.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_server_discovery.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_securechannel_manager.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_session_manager.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_subscription.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_subscription_datachange.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_subscription_events.c
+        ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_networkmessage.c
+        ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub.c
+        ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_manager.c
+        ${PROJECT_SOURCE_DIR}/src/pubsub/ua_pubsub_ns0.c
+        ${PROJECT_SOURCE_DIR}/src/gds/ua_gds_ns.c
+        ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.c
+        ${PROJECT_SOURCE_DIR}/src/gds/ua_certificate_manager.c
+        # services
+        ${PROJECT_SOURCE_DIR}/src/server/ua_services_view.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_services_call.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_services_session.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_services_attribute.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_services_discovery.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_services_subscription.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_services_securechannel.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_services_nodemanagement.c
+        ${PROJECT_SOURCE_DIR}/src/server/ua_services_discovery_multicast.c
+        # client
+        ${PROJECT_SOURCE_DIR}/src/client/ua_client.c
+        ${PROJECT_SOURCE_DIR}/src/client/ua_client_connect.c
+        ${PROJECT_SOURCE_DIR}/src/client/ua_client_connect_async.c
+        ${PROJECT_SOURCE_DIR}/src/client/ua_client_discovery.c
+        ${PROJECT_SOURCE_DIR}/src/client/ua_client_highlevel.c
+        ${PROJECT_SOURCE_DIR}/src/client/ua_client_subscriptions.c
+        ${PROJECT_SOURCE_DIR}/src/client/ua_client_worker.c
 
-                # dependencies
-                ${PROJECT_SOURCE_DIR}/deps/libc_time.c
-                ${PROJECT_SOURCE_DIR}/deps/pcg_basic.c
-                ${PROJECT_SOURCE_DIR}/deps/base64.c)
+        # dependencies
+        ${PROJECT_SOURCE_DIR}/deps/libc_time.c
+        ${PROJECT_SOURCE_DIR}/deps/pcg_basic.c
+        ${PROJECT_SOURCE_DIR}/deps/base64.c)
 
 set(default_plugin_headers ${PROJECT_SOURCE_DIR}/plugins/ua_accesscontrol_default.h
-                           ${PROJECT_SOURCE_DIR}/plugins/ua_pki_certificate.h
-                           ${PROJECT_SOURCE_DIR}/plugins/ua_log_stdout.h
-                           ${PROJECT_SOURCE_DIR}/plugins/ua_nodestore_default.h
-                           ${PROJECT_SOURCE_DIR}/plugins/ua_config_default.h
-                           ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_none.h
-)
+        ${PROJECT_SOURCE_DIR}/plugins/ua_pki_certificate.h
+        ${PROJECT_SOURCE_DIR}/plugins/ua_log_stdout.h
+        ${PROJECT_SOURCE_DIR}/plugins/ua_nodestore_default.h
+        ${PROJECT_SOURCE_DIR}/plugins/ua_config_default.h
+        ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_none.h
+        )
 
 set(default_plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_log_stdout.c
-                           ${PROJECT_SOURCE_DIR}/plugins/ua_accesscontrol_default.c
-                           ${PROJECT_SOURCE_DIR}/plugins/ua_pki_certificate.c
-                           ${PROJECT_SOURCE_DIR}/plugins/ua_nodestore_default.c
-                           ${PROJECT_SOURCE_DIR}/plugins/ua_config_default.c
-                           ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_none.c
-)
+        ${PROJECT_SOURCE_DIR}/plugins/ua_accesscontrol_default.c
+        ${PROJECT_SOURCE_DIR}/plugins/ua_pki_certificate.c
+        ${PROJECT_SOURCE_DIR}/plugins/ua_nodestore_default.c
+        ${PROJECT_SOURCE_DIR}/plugins/ua_config_default.c
+        ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_none.c
+        )
 
 if(UA_ENABLE_ENCRYPTION)
     list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic128rsa15.h
-                                       ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic256sha256.h)
+            ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic256sha256.h)
     list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic128rsa15.c
-                                       ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic256sha256.c)
+            ${PROJECT_SOURCE_DIR}/plugins/ua_securitypolicy_basic256sha256.c)
 endif()
 
 if(UA_ENABLE_PUBSUB)
@@ -571,18 +571,18 @@ endif()
 if(UA_ENABLE_DISCOVERY_MULTICAST)
     # prepend in list, otherwise it complains that winsock2.h has to be included before windows.h
     set(internal_headers ${PROJECT_BINARY_DIR}/src_generated/mdnsd_config.h
-                         ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/1035.h
-                         ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/xht.h
-                         ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/sdtxt.h
-                         ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/mdnsd.h
-                         ${internal_headers} )
+            ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/1035.h
+            ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/xht.h
+            ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/sdtxt.h
+            ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/mdnsd.h
+            ${internal_headers} )
     list(APPEND internal_headers ${PROJECT_SOURCE_DIR}/src/server/ua_mdns_internal.h)
     set(lib_sources ${PROJECT_SOURCE_DIR}/src/server/ua_mdns.c
-        ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/1035.c
-        ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/xht.c
-        ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/sdtxt.c
-        ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/mdnsd.c
-        ${lib_sources})
+            ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/1035.c
+            ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/xht.c
+            ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/sdtxt.c
+            ${PROJECT_SOURCE_DIR}/deps/mdnsd/libmdnsd/mdnsd.c
+            ${lib_sources})
 endif()
 
 #########################
@@ -658,43 +658,43 @@ endforeach()
 
 # standard-defined data types
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated.c
-                          ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated.h
-                          ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated_handling.h
-                          ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated_encoding_binary.h
-                   PRE_BUILD
-                   COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_datatypes.py
-                           ${UA_FILE_NODEIDS_TMP}
-                           ${SELECTED_TYPES_TMP}
-                           ${UA_FILE_TYPES_BSD_TMP}
-                           ${PROJECT_BINARY_DIR}/src_generated/ua_types
-                   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_datatypes.py
-                           ${UA_FILE_NODEIDS}
-                           ${UA_FILE_TYPES_BSD}
-                           ${UA_FILE_DATATYPES})
+        ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated_handling.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated_encoding_binary.h
+        PRE_BUILD
+        COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_datatypes.py
+        ${UA_FILE_NODEIDS_TMP}
+        ${SELECTED_TYPES_TMP}
+        ${UA_FILE_TYPES_BSD_TMP}
+        ${PROJECT_BINARY_DIR}/src_generated/ua_types
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_datatypes.py
+        ${UA_FILE_NODEIDS}
+        ${UA_FILE_TYPES_BSD}
+        ${UA_FILE_DATATYPES})
 # we need a custom target to avoid that the generator is called concurrently and thus overwriting files while the other thread is compiling
 add_custom_target(open62541-generator-types DEPENDS
-                  ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated.c
-                  ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated.h
-                  ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated_handling.h
-                  ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated_encoding_binary.h)
+        ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated.c
+        ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated_handling.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_types_generated_encoding_binary.h)
 
 # transport data types
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated.c
-                          ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated.h
-                          ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated_handling.h
-                          ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated_encoding_binary.h
-                   PRE_BUILD
-                   COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_datatypes.py
-                           --namespace=1
-                           --selected-types=${PROJECT_SOURCE_DIR}/tools/schema/datatypes_transport.txt
-                           ${UA_FILE_TYPES_BSD_TMP}
-                           --type-bsd=${PROJECT_SOURCE_DIR}/tools/schema/Custom.Opc.Ua.Transport.bsd
-                           --no-builtin
-                           ${PROJECT_BINARY_DIR}/src_generated/ua_transport
-                   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_datatypes.py
-                           ${PROJECT_SOURCE_DIR}/tools/schema/datatypes_transport.txt
-                           ${UA_FILE_TYPES_BSD}
-                           ${PROJECT_SOURCE_DIR}/tools/schema/Custom.Opc.Ua.Transport.bsd)
+        ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated_handling.h
+        ${PROJECT_BINARY_DIR}/src_generated/ua_transport_generated_encoding_binary.h
+        PRE_BUILD
+        COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_datatypes.py
+        --namespace=1
+        --selected-types=${PROJECT_SOURCE_DIR}/tools/schema/datatypes_transport.txt
+        ${UA_FILE_TYPES_BSD_TMP}
+        --type-bsd=${PROJECT_SOURCE_DIR}/tools/schema/Custom.Opc.Ua.Transport.bsd
+        --no-builtin
+        ${PROJECT_BINARY_DIR}/src_generated/ua_transport
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_datatypes.py
+        ${PROJECT_SOURCE_DIR}/tools/schema/datatypes_transport.txt
+        ${UA_FILE_TYPES_BSD}
+        ${PROJECT_SOURCE_DIR}/tools/schema/Custom.Opc.Ua.Transport.bsd)
 
 # we need a custom target to avoid that the generator is called concurrently and thus overwriting files while the other thread is compiling
 add_custom_target(open62541-generator-transport DEPENDS
@@ -705,25 +705,18 @@ add_custom_target(open62541-generator-transport DEPENDS
 
 # statuscode explanation
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/ua_statuscodes.h
-                          ${PROJECT_BINARY_DIR}/src_generated/ua_statuscodes.c
+        ${PROJECT_BINARY_DIR}/src_generated/ua_statuscodes.c
         PRE_BUILD
         COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_statuscode_descriptions.py
         ${UA_FILE_STATUSCODES} ${PROJECT_BINARY_DIR}/src_generated/ua_statuscodes
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_statuscode_descriptions.py
-                ${UA_FILE_STATUSCODES})
-
-# Temporarily generate_nodeid_header.py can only parse one file
-if(UA_NAMESPACE_ZERO STREQUAL "FULL")
-    set(UA_FILE_NODEIDS_HEADER ${PROJECT_SOURCE_DIR}/deps/ua-nodeset/Schema/NodeIds.csv)
-else()
-    set(UA_FILE_NODEIDS_HEADER ${PROJECT_SOURCE_DIR}/tools/schema/NodeIds.csv)
-endif()
+        ${UA_FILE_STATUSCODES})
 
 # Header containing defines for all NodeIds
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/ua_nodeids.h
         PRE_BUILD
         COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_nodeid_header.py
-        ${UA_FILE_NODEIDS_HEADER}  ${PROJECT_BINARY_DIR}/src_generated/ua_nodeids NS0
+        ${UA_FILE_NODEIDS_TMP}  ${PROJECT_BINARY_DIR}/src_generated/ua_nodeids NS0
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_nodeid_header.py
         ${UA_FILE_NODEIDS_HEADER})
 
@@ -736,27 +729,27 @@ add_custom_target(open62541-generator-statuscode DEPENDS
 
 # single-file release
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/open62541.h
-                   PRE_BUILD
-                   COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py
-                           ${OPEN62541_VER_COMMIT} ${CMAKE_CURRENT_BINARY_DIR}/open62541.h
-                           ${exported_headers} ${default_plugin_headers} ${ua_architecture_headers}
-                   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py
-                           ${exported_headers} ${default_plugin_headers} ${ua_architecture_headers})
+        PRE_BUILD
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py
+        ${OPEN62541_VER_COMMIT} ${CMAKE_CURRENT_BINARY_DIR}/open62541.h
+        ${exported_headers} ${default_plugin_headers} ${ua_architecture_headers}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py
+        ${exported_headers} ${default_plugin_headers} ${ua_architecture_headers})
 
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/open62541.c
-                   PRE_BUILD
-                   COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py
-                           ${OPEN62541_VER_COMMIT} ${CMAKE_CURRENT_BINARY_DIR}/open62541.c
-                           ${internal_headers} ${lib_sources} ${default_plugin_sources} ${ua_architecture_sources}
-                   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py ${internal_headers}
-                           ${lib_sources} ${default_plugin_sources} ${ua_architecture_sources} )
+        PRE_BUILD
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py
+        ${OPEN62541_VER_COMMIT} ${CMAKE_CURRENT_BINARY_DIR}/open62541.c
+        ${internal_headers} ${lib_sources} ${default_plugin_sources} ${ua_architecture_sources}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py ${internal_headers}
+        ${lib_sources} ${default_plugin_sources} ${ua_architecture_sources} )
 
 add_custom_target(open62541-amalgamation-source DEPENDS ${PROJECT_BINARY_DIR}/open62541.c)
 add_custom_target(open62541-amalgamation-header DEPENDS ${PROJECT_BINARY_DIR}/open62541.h)
 
 add_dependencies(open62541-amalgamation-header open62541-generator-types)
 add_dependencies(open62541-amalgamation-source open62541-generator-types
-                 open62541-generator-transport open62541-generator-statuscode)
+        open62541-generator-transport open62541-generator-statuscode)
 
 
 set(NODESET_MAX_STR_LEN 0)
@@ -771,25 +764,25 @@ endif()
 
 # generated namespace 0
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/ua_namespace0.c
-                          ${PROJECT_BINARY_DIR}/src_generated/ua_namespace0.h
-                   PRE_BUILD
-                   COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/nodeset_compiler.py
-                           --generate-ns0
-                           --internal-headers
-                           --max-string-length=${NODESET_MAX_STR_LEN}
-                           --encode-binary-size=${UA_NODESET_ENCODE_BINARY_SIZE}
-                           --ignore ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/NodeID_NS0_Base.txt
-                           --xml ${UA_FILE_NS0}
-                           ${UA_FILE_NSPUBSUB}
-                           ${PROJECT_BINARY_DIR}/src_generated/ua_namespace0
-                   DEPENDS ${UA_FILE_NS0}
-                           ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/nodeset_compiler.py
-                           ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/nodes.py
-                           ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/nodeset.py
-                           ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/datatypes.py
-                           ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/backend_open62541.py
-                           ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/backend_open62541_nodes.py
-                           ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/backend_open62541_datatypes.py)
+        ${PROJECT_BINARY_DIR}/src_generated/ua_namespace0.h
+        PRE_BUILD
+        COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/nodeset_compiler.py
+        --generate-ns0
+        --internal-headers
+        --max-string-length=${NODESET_MAX_STR_LEN}
+        --encode-binary-size=${UA_NODESET_ENCODE_BINARY_SIZE}
+        --ignore ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/NodeID_NS0_Base.txt
+        --xml ${UA_FILE_NS0}
+        ${UA_FILE_NSPUBSUB}
+        ${PROJECT_BINARY_DIR}/src_generated/ua_namespace0
+        DEPENDS ${UA_FILE_NS0}
+        ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/nodeset_compiler.py
+        ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/nodes.py
+        ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/nodeset.py
+        ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/datatypes.py
+        ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/backend_open62541.py
+        ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/backend_open62541_nodes.py
+        ${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/backend_open62541_datatypes.py)
 
 # stack protector needs to be disabled for the huge ns0 file, otherwise it may take many minutes to compile the file.
 if(NOT MSVC)
@@ -819,11 +812,11 @@ if(UA_ENABLE_AMALGAMATION)
     # and thus may overwrite the amalgamation result during multiprocessor compilation
     # the header is already a dependency of open62541 target itself
     add_dependencies(open62541-object
-                     open62541-amalgamation-header
-                     open62541-generator-types
-                     open62541-generator-transport
-                     open62541-generator-statuscode
-                     open62541-amalgamation-source)
+            open62541-amalgamation-header
+            open62541-generator-types
+            open62541-generator-transport
+            open62541-generator-statuscode
+            open62541-amalgamation-source)
 
     add_library(open62541 $<TARGET_OBJECTS:open62541-object>)
 
@@ -834,10 +827,10 @@ else()
     add_definitions(-DUA_NO_AMALGAMATION)
     add_library(open62541-object OBJECT ${lib_sources} ${internal_headers} ${exported_headers})
     add_dependencies(open62541-object
-                     open62541-amalgamation-header
-                     open62541-generator-types
-                     open62541-generator-transport
-                     open62541-generator-statuscode)
+            open62541-amalgamation-header
+            open62541-generator-types
+            open62541-generator-transport
+            open62541-generator-statuscode)
     target_include_directories(open62541-object PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
     add_library(open62541-plugins OBJECT ${default_plugin_sources} ${ua_architecture_sources} ${exported_headers})
@@ -880,8 +873,8 @@ add_definitions(${ua_architecture_add_definitions})
 
 GET_PROPERTY(ua_architecture_remove_definitions GLOBAL PROPERTY UA_ARCHITECTURE_REMOVE_DEFINITIONS)
 if (NOT "${ua_architecture_remove_definitions}" STREQUAL "")
-  string(REPLACE " " ";" ua_architecture_remove_definitions_list ${ua_architecture_remove_definitions})
-  remove_definitions(${ua_architecture_remove_definitions_list})
+    string(REPLACE " " ";" ua_architecture_remove_definitions_list ${ua_architecture_remove_definitions})
+    remove_definitions(${ua_architecture_remove_definitions_list})
 endif(NOT "${ua_architecture_remove_definitions}" STREQUAL "")
 
 GET_PROPERTY(ua_architecture_append_to_library GLOBAL PROPERTY UA_ARCHITECTURE_APPEND_TO_LIBRARY)
@@ -922,38 +915,38 @@ endif()
 
 find_package(ClangTools)
 add_custom_target(lint ${CLANG_TIDY_PROGRAM}
-                  ${lib_sources}
-                  -checks=cert-*,performance-*,readability-*,-readability-braces-around-statements
-                  -warnings-as-errors=cert-*,performance-*,readability-*,-readability-braces-around-statements
-                  --
-                  -std=c99
-                  -I${PROJECT_SOURCE_DIR}/include
-                  -I${PROJECT_SOURCE_DIR}/plugins
-                  -I${PROJECT_SOURCE_DIR}/deps
-                  -I${PROJECT_SOURCE_DIR}/src
-                  -I${PROJECT_SOURCE_DIR}/src/server
-                  -I${PROJECT_SOURCE_DIR}/src/client
-                  -I${PROJECT_BINARY_DIR}/src_generated
-                  -DUA_NO_AMALGAMATION
-                  DEPENDS ${lib_sources}
-                  COMMENT "Run clang-tidy on the library")
+        ${lib_sources}
+        -checks=cert-*,performance-*,readability-*,-readability-braces-around-statements
+        -warnings-as-errors=cert-*,performance-*,readability-*,-readability-braces-around-statements
+        --
+        -std=c99
+        -I${PROJECT_SOURCE_DIR}/include
+        -I${PROJECT_SOURCE_DIR}/plugins
+        -I${PROJECT_SOURCE_DIR}/deps
+        -I${PROJECT_SOURCE_DIR}/src
+        -I${PROJECT_SOURCE_DIR}/src/server
+        -I${PROJECT_SOURCE_DIR}/src/client
+        -I${PROJECT_BINARY_DIR}/src_generated
+        -DUA_NO_AMALGAMATION
+        DEPENDS ${lib_sources}
+        COMMENT "Run clang-tidy on the library")
 add_dependencies(lint open62541)
 
 add_custom_target(cpplint cpplint
-                  ${lib_sources}
-                  ${internal_headers}
-                  ${default_plugin_headers}
-                  ${default_plugin_sources}
-                  ${ua_architecture_headers}
-                  ${ua_architecture_sources}
-                  DEPENDS ${lib_sources}
-                          ${internal_headers}
-                          ${default_plugin_headers}
-                          ${default_plugin_sources}
-                          ${ua_architecture_headers}
-                          ${ua_architecture_sources}
+        ${lib_sources}
+        ${internal_headers}
+        ${default_plugin_headers}
+        ${default_plugin_sources}
+        ${ua_architecture_headers}
+        ${ua_architecture_sources}
+        DEPENDS ${lib_sources}
+        ${internal_headers}
+        ${default_plugin_headers}
+        ${default_plugin_sources}
+        ${ua_architecture_headers}
+        ${ua_architecture_sources}
 
-                  COMMENT "Run cpplint code style checker on the library")
+        COMMENT "Run cpplint code style checker on the library")
 
 ##########################
 # Installation           #
@@ -977,23 +970,23 @@ install(TARGETS open62541
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/open62541-config.cmake.in"
-                              "${CMAKE_CURRENT_BINARY_DIR}/cmake/open62541-config.cmake"
-                              INSTALL_DESTINATION "${cmake_configfile_install}"
-                              PATH_VARS target_install_dest_name open62541_tools_dir)
+        "${CMAKE_CURRENT_BINARY_DIR}/cmake/open62541-config.cmake"
+        INSTALL_DESTINATION "${cmake_configfile_install}"
+        PATH_VARS target_install_dest_name open62541_tools_dir)
 
 set(open62541_VERSION)
 get_target_property(open62541_VERSION open62541 VERSION)
 
 write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/open62541ConfigVersion.cmake"
-                                 VERSION ${open62541_VERSION}
-                                 COMPATIBILITY AnyNewerVersion)
+        VERSION ${open62541_VERSION}
+        COMPATIBILITY AnyNewerVersion)
 
 install(EXPORT open62541Targets
         FILE open62541Targets.cmake
         DESTINATION "${cmake_configfile_install}")
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/cmake/open62541-config.cmake"
-              "${CMAKE_CURRENT_BINARY_DIR}/open62541ConfigVersion.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/open62541ConfigVersion.cmake"
         DESTINATION "${cmake_configfile_install}")
 
 

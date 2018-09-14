@@ -69,6 +69,8 @@ struct GDS_CA {
 typedef struct {
     UA_NodeId certificateGroupId;
     UA_NodeId trustListId;
+    size_t certificateTypesSize;
+    UA_NodeId *certificateTypes;
     GDS_CA *ca;
 } GDS_CertificateGroup;
 

@@ -195,10 +195,17 @@ static UA_StatusCode createDefaultCertificateGroup(UA_ServerConfig *conf){
 
     conf->gds_certificateGroupSize = 1;
     conf->gds_certificateGroups = (GDS_CertificateGroup *)UA_malloc(sizeof(GDS_CertificateGroup));
-    conf->gds_certificateGroups->certificateGroupId = UA_NODEID_NUMERIC(2, 615);
-    conf->gds_certificateGroups->trustListId = UA_NODEID_NUMERIC(2, 616);
-    conf->gds_certificateGroups->ca = (GDS_CA *)UA_malloc(sizeof(GDS_CA));
-
+    conf->gds_certificateGroups[0].certificateGroupId =
+            UA_NODEID_NUMERIC(2, UA_NS2ID_DIRECTORY_CERTIFICATEGROUPS_DEFAULTAPPLICATIONGROUP);
+    conf->gds_certificateGroups[0].trustListId =
+            UA_NODEID_NUMERIC(2, UA_NS2ID_DIRECTORY_CERTIFICATEGROUPS_DEFAULTAPPLICATIONGROUP_TRUSTLIST);
+    conf->gds_certificateGroups[0].ca = (GDS_CA *)UA_malloc(sizeof(GDS_CA));
+    conf->gds_certificateGroups[0].certificateTypesSize = 2;
+    conf->gds_certificateGroups[0].certificateTypes =  (UA_NodeId *)UA_malloc(2 * sizeof(UA_NodeId));
+    conf->gds_certificateGroups[0].certificateTypes[0] =
+            UA_NODEID_NUMERIC(0, UA_NS0ID_RSAMINAPPLICATIONCERTIFICATETYPE);
+    conf->gds_certificateGroups[0].certificateTypes[1] =
+            UA_NODEID_NUMERIC(0, UA_NS0ID_RSASHA256APPLICATIONCERTIFICATETYPE);
     UA_String name = UA_STRING("O=open62541,CN=GDS@localhost");
     char serialNumber[2] = {0, 127};
     UA_InitCA(conf->gds_certificateGroups->ca, name, (60 * 60 * 24 * 365 * 10),
@@ -679,6 +686,7 @@ UA_ServerConfig_delete(UA_ServerConfig *config) {
 
 #ifdef UA_ENABLE_GDS
     for(size_t i = 0; i < config->gds_certificateGroupSize; ++i) {
+        UA_free(config->gds_certificateGroups[i].certificateTypes);
         GDS_CA *ca = config->gds_certificateGroups[i].ca;
         ca->deleteMembers(ca);
         UA_free(ca);
