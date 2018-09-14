@@ -47,27 +47,19 @@ void delete_CertificateManager_entry(gds_cm_entry *newEntry){
 }
 
 static
-UA_StatusCode check_AppId_CertifificateGroupId(UA_Server *server,
-                                               UA_NodeId *applicationId,
-                                               UA_NodeId *certificateGroupId,
-                                               GDS_CertificateGroup **certificateGroup) {
+UA_StatusCode isApplicationAssignedToCertificateGroup(UA_Server *server,
+                                                      UA_NodeId *applicationId,
+                                                      GDS_CertificateGroup *certificateGroup) {
     UA_StatusCode ret = UA_STATUSCODE_GOOD;
     if (UA_NodeId_equal(applicationId, &UA_NODEID_NULL)
-        || UA_NodeId_equal(certificateGroupId, &UA_NODEID_NULL)) {
+        || certificateGroup == NULL) {
         return UA_STATUSCODE_BADINVALIDARGUMENT;
-    }
-
-    for(size_t i = 0; i < server->config.gds_certificateGroupSize; i++){
-        if (UA_NodeId_equal(certificateGroupId, &server->config.gds_certificateGroups[i].certificateGroupId)){
-            *certificateGroup =  &server->config.gds_certificateGroups[i];
-            break;
-        }
     }
 
     if (certificateGroup == NULL)
         return UA_STATUSCODE_BADINVALIDARGUMENT;
 
-    UA_Boolean validAppId = UA_FALSE;
+    UA_Boolean registered = UA_FALSE;
     if (server->gds_registeredServersSize > 0) {
         gds_registeredServer_entry* current;
         //Looking for application
@@ -75,19 +67,51 @@ UA_StatusCode check_AppId_CertifificateGroupId(UA_Server *server,
             if(UA_NodeId_equal(&current->gds_registeredServer.applicationId, applicationId)) {
                 //Iterate through certificate groups of the registered application
                 for (size_t i = 0; i < current->certificateGroupSize; i++) {
-                    if (UA_NodeId_equal(&current->certificateGroups[i], certificateGroupId)) {
-                        validAppId = UA_TRUE;
+                    if (UA_NodeId_equal(&current->certificateGroups[i], &certificateGroup->certificateGroupId)) {
+                        registered = UA_TRUE;
                     }
                 }
             }
         }
     }
 
-    if (!validAppId)
+    if (!registered) {
         return UA_STATUSCODE_BADINVALIDARGUMENT;
-
+    }
 
     return ret;
+}
+
+static UA_StatusCode
+GetCertificateGroup(UA_Server *server,
+                    UA_NodeId *applicationId,
+                    UA_NodeId *certificateGroupId,
+                    GDS_CertificateGroup **certificateGroup) {
+    if (UA_NodeId_equal(applicationId,&UA_NODEID_NULL))
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+
+    if (UA_NodeId_equal(certificateGroupId, &UA_NODEID_NULL)){
+        //First ApplicationGroup represents DefaultApplicationGroup
+        *certificateGroup =  &server->config.gds_certificateGroups[0];
+     //   ret = isAppAssignedToCertificateGroup(server,applicationId,&server->config.gds_certificateGroups[0].certificateGroupId,certificateGroup);
+    }
+    else {
+        //Looking for the CertificateGroup
+        UA_Boolean isValidNodeId = UA_FALSE;
+        for(size_t i = 0; i < server->config.gds_certificateGroupSize; i++) {
+            if (UA_NodeId_equal(certificateGroupId, &server->config.gds_certificateGroups[i].certificateGroupId)){
+                isValidNodeId = UA_TRUE;
+                *certificateGroup =  &server->config.gds_certificateGroups[i];
+                break;
+            }
+        }
+
+        if (!isValidNodeId) {
+            return UA_STATUSCODE_BADINVALIDARGUMENT;
+        }
+    }
+
+    return isApplicationAssignedToCertificateGroup(server,applicationId, *certificateGroup);
 }
 
 UA_StatusCode
@@ -99,7 +123,8 @@ GDS_GetTrustList(UA_Server *server,
 
     UA_StatusCode ret;
     GDS_CertificateGroup *cg;
-    ret = check_AppId_CertifificateGroupId(server,applicationId,certificateGroupId, &cg);
+    ret = GetCertificateGroup(server,applicationId, certificateGroupId, &cg);
+
     if (ret != UA_STATUSCODE_GOOD) {
         return ret;
     }
@@ -226,26 +251,29 @@ UA_StatusCode
 GDS_StartNewKeyPairRequest(UA_Server *server,
                            UA_NodeId *applicationId,
                            UA_NodeId *certificateGroupId,
-                           UA_NodeId *certificateTypeId,
+                           UA_NodeId *certificateTypeId, //every certificateTypeId supports 2048 BitKey
                            UA_String *subjectName,
                            size_t  domainNameSize,
                            UA_String *domainNames,
                            UA_String *privateKeyFormat,
                            UA_String *privateKeyPassword,
                            UA_NodeId *requestId) {
-    if (UA_NodeId_equal(applicationId,&UA_NODEID_NULL))
-        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    GDS_CertificateGroup *cg;
+    UA_StatusCode retval =
+            GetCertificateGroup(server, applicationId, certificateGroupId, &cg);
 
-    GDS_CA *ca = server->config.gds_certificateGroups[0].ca; //DefaultApplicationGroup
+    if (retval != UA_STATUSCODE_GOOD)
+        return retval;
+
+    GDS_CA *ca = cg->ca;
     gds_cm_entry *newEntry = (gds_cm_entry *)UA_calloc(1, sizeof(gds_cm_entry));
     UA_GDS_CM_CHECK_MALLOC(newEntry);
 
-
-    UA_StatusCode retval = ca->createNewKeyPair(ca, subjectName,
-                         privateKeyFormat, privateKeyPassword,
-                         2048, domainNameSize, domainNames,
-                         &newEntry->certificate, &newEntry->privateKey,
-                         &newEntry->issuerCertificateSize, &newEntry->issuerCertificates);
+    retval = ca->createNewKeyPair(ca, subjectName,
+                                  privateKeyFormat, privateKeyPassword,
+                                  2048, domainNameSize, domainNames,
+                                  &newEntry->certificate, &newEntry->privateKey,
+                                  &newEntry->issuerCertificateSize, &newEntry->issuerCertificates);
 
     if (retval == UA_STATUSCODE_GOOD){
         *requestId = newEntry->requestId = UA_NODEID_GUID(2, UA_Guid_random());
@@ -269,21 +297,24 @@ GDS_StartSigningRequest(UA_Server *server,
                         UA_NodeId *certificateTypeId,
                         UA_ByteString *certificateRequest,
                         UA_NodeId *requestId){
+    GDS_CertificateGroup *cg;
+    UA_StatusCode retval =
+            GetCertificateGroup(server, applicationId, certificateGroupId, &cg);
 
-    GDS_CA *ca = server->config.gds_certificateGroups[0].ca;
+    if (retval != UA_STATUSCODE_GOOD)
+        return retval;
 
-    gds_cm_entry *newEntry = (gds_cm_entry *)UA_calloc(1, sizeof(gds_cm_entry));
+    GDS_CA *ca = cg->ca;
+    gds_cm_entry *newEntry = (gds_cm_entry *) UA_calloc(1, sizeof(gds_cm_entry));
     UA_GDS_CM_CHECK_MALLOC(newEntry);
 
-    UA_StatusCode retval = ca->certificateSigningRequest(ca, 0, certificateRequest,
-                                  &newEntry->certificate,
-                                  &newEntry->issuerCertificateSize,
-                                  &newEntry->issuerCertificates);
+    retval = ca->certificateSigningRequest(ca, 0, certificateRequest,
+                                           &newEntry->certificate,
+                                           &newEntry->issuerCertificateSize,
+                                           &newEntry->issuerCertificates);
 
     if (retval == UA_STATUSCODE_GOOD){
         *requestId = newEntry->requestId = UA_NODEID_GUID(2, UA_Guid_random());
-        printf("RequestID: " UA_PRINTF_GUID_FORMAT "\n",
-               UA_PRINTF_GUID_DATA(requestId->identifier.guid));
         newEntry->applicationId = *applicationId;
         newEntry->isApproved = UA_TRUE;
         newEntry->privateKey = UA_BYTESTRING_NULL;

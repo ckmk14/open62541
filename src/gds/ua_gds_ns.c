@@ -26,8 +26,6 @@ openMethodCallback(UA_Server *server,
                                 const UA_NodeId *objectId, void *objectContext,
                                 size_t inputSize, const UA_Variant *input,
                                 size_t outputSize, UA_Variant *output) {
-    printf("\nIn Method Open\n");
-
     UA_UInt32 fileHandle;
     UA_StatusCode retval = GDS_OpenTrustList(server,
                                              sessionId,
@@ -48,8 +46,6 @@ readTrustListMethodCallback(UA_Server *server,
                             const UA_NodeId *objectId, void *objectContext,
                             size_t inputSize, const UA_Variant *input,
                             size_t outputSize, UA_Variant *output) {
-    printf("\nIn Method ReadTrustList\n");
-
     UA_TrustListDataType tl;
     UA_StatusCode retval = GDS_ReadTrustList(server,
                                              sessionId,
@@ -71,8 +67,6 @@ closeMethodCallback(UA_Server *server,
                    const UA_NodeId *objectId, void *objectContext,
                    size_t inputSize, const UA_Variant *input,
                    size_t outputSize, UA_Variant *output) {
-    printf("\nIn Method Close\n");
-
     UA_StatusCode retval = GDS_CloseTrustList(server,
                                              sessionId,
                                              objectId,
@@ -88,7 +82,6 @@ startGetTrustListMethodCallback(UA_Server *server,
                                   const UA_NodeId *objectId, void *objectContext,
                                   size_t inputSize, const UA_Variant *input,
                                   size_t outputSize, UA_Variant *output) {
-    printf("\nIn Method GetTrustList\n");
     UA_NodeId trustListId;
     UA_StatusCode retval = GDS_GetTrustList(server,
                                             sessionId,
@@ -199,7 +192,6 @@ getCertificateGroupsMethodCallback(UA_Server *server,
                                    const UA_NodeId *objectId, void *objectContext,
                                    size_t inputSize, const UA_Variant *input,
                                    size_t outputSize, UA_Variant *output) {
-    printf("\nIn Method GetCertificateGroups\n");
     size_t length = 0;
     UA_NodeId *array;
     UA_StatusCode retval =
@@ -225,8 +217,6 @@ registerApplicationMethodCallback(UA_Server *server,
                       const UA_NodeId *objectId, void *objectContext,
                       size_t inputSize, const UA_Variant *input,
                       size_t outputSize, UA_Variant *output) {
-    printf("\nIn Method registerApplication\n");
-
     UA_NodeId applicationId;
     //The DefaultApplicationGroup is the default value for new applications
     UA_NodeId dag =  UA_NODEID_NUMERIC(2, 615);
@@ -246,7 +236,6 @@ findApplicationMethodCallback(UA_Server *server,
                       const UA_NodeId *objectId, void *objectContext,
                       size_t inputSize, const UA_Variant *input,
                       size_t outputSize, UA_Variant *output) {
-    printf("\nIn Method findApplication\n");
     size_t length = 0;
     UA_ApplicationRecordDataType *array;
     UA_StatusCode retval =

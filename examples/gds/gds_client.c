@@ -240,11 +240,6 @@ UA_StatusCode call_finishRequest(UA_Client *client,
         UA_ByteString_allocBuffer(certificate, cert->length);
         memcpy(certificate->data, cert->data, cert->length);
 
-
-        FILE *f = fopen("/home/kocybi/tt.der", "w");
-        fwrite(cert->data, cert->length, 1, f);
-        fclose(f);
-
         UA_ByteString *privKey = (UA_ByteString *) output[1].data;
         if (privKey != NULL) {
             UA_ByteString_allocBuffer(privateKey, privKey->length);
