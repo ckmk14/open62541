@@ -34,8 +34,8 @@ struct GDS_CA {
                                        unsigned  int keySize,
                                        size_t domainNamesSize,
                                        UA_String *domainNamesArray,
-                                       UA_ByteString *const certificate,
-                                       UA_ByteString *const privateKey,
+                                       UA_ByteString *certificate,
+                                       UA_ByteString *privateKey,
                                        size_t *issuerCertificateSize,
                                        UA_ByteString **issuerCertificates);
 
@@ -57,11 +57,17 @@ struct GDS_CA {
     UA_StatusCode (*getTrustList)(GDS_CA *scg,
                                   UA_TrustListDataType *list);
 
-    UA_StatusCode(*addCertificatetoCRL)(GDS_CA *scg,
+    UA_StatusCode (*addCertificatetoCRL)(GDS_CA *scg,
                                         size_t serialNumberSize,
                                         char *serialNumber);
 
-    UA_Boolean  (*isCertificatefromCA) (void *context, UA_ByteString certificate);
+    UA_StatusCode (*getCertificateStatus)(GDS_CA *scg,
+                                         UA_ByteString *certificate,
+                                         UA_Boolean *updateRequired);
+
+    UA_StatusCode (*isCertificatefromCA)(GDS_CA *scg,
+                                         UA_ByteString certificate,
+                                         UA_Boolean *result);
 
     void (*deleteMembers)(GDS_CA *cv);
 };

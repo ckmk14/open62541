@@ -617,6 +617,20 @@ UA_StatusCode addCertificatetoCRL_gnutls(GDS_CA *scg,
     return ret;
 }
 
+//TODO: Implement function
+static
+UA_StatusCode getCertificateStatus_gnutls(GDS_CA *scg,
+                                    UA_ByteString *certificate,
+                                    UA_Boolean *updateRequired) {
+    return UA_STATUSCODE_GOOD;
+}
+//TODO: Implement function
+static
+UA_StatusCode isCertificatefromCA_gnutls(GDS_CA *scg,
+                                  UA_ByteString certificate,
+                                  UA_Boolean *result) {
+    return UA_STATUSCODE_GOOD;
+}
 
 static
 UA_StatusCode removeCertificateFromTrustlist_gnutls(GDS_CA *scg,
@@ -935,7 +949,6 @@ UA_StatusCode create_caContext(GDS_CA *scg,
     return ret;
 }
 
-
 UA_StatusCode UA_InitCA(GDS_CA *scg,
                         UA_String caName,
                         unsigned int caDays,
@@ -952,6 +965,8 @@ UA_StatusCode UA_InitCA(GDS_CA *scg,
     scg->removeCertificateFromTrustlist = removeCertificateFromTrustlist_gnutls;
     scg->addCertificatetoCRL = addCertificatetoCRL_gnutls;
     scg->getTrustList = getTrustList_gnutls;
+    scg->getCertificateStatus = getCertificateStatus_gnutls;
+    scg->isCertificatefromCA = isCertificatefromCA_gnutls;
     scg->deleteMembers = deleteMembers_gnutls;
 
     return create_caContext(scg, caName, caDays, serialNumberSize, serialNumber, caBitKeySize);

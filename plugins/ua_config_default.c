@@ -208,8 +208,11 @@ static UA_StatusCode createDefaultCertificateGroup(UA_ServerConfig *conf){
             UA_NODEID_NUMERIC(0, UA_NS0ID_RSASHA256APPLICATIONCERTIFICATETYPE);
     UA_String name = UA_STRING("O=open62541,CN=GDS@localhost");
     char serialNumber[2] = {0, 127};
-    UA_InitCA(conf->gds_certificateGroups->ca, name, (60 * 60 * 24 * 365 * 10),
+
+    UA_InitCA(conf->gds_certificateGroups->ca,
+              name, (60 * 60 * 24 * 365 * 10),
               2, serialNumber, 2048, conf->logger);
+
     return UA_STATUSCODE_GOOD;
 }
 #endif
