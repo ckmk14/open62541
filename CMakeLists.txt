@@ -555,8 +555,8 @@ endif()
 
 
 if(UA_ENABLE_GDS)
-    list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/src/gds/ua_ca_gnutls.h)
-    list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/src/gds/ua_ca_gnutls.c)
+    list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/plugins/ua_ca_gnutls.h)
+    list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_ca_gnutls.c)
 endif()
 
 
