@@ -583,7 +583,8 @@ deinit_create:
 static
 UA_StatusCode addCertificatetoCRL_gnutls(GDS_CA *scg,
                                   size_t serialNumberSize,
-                                  char *serialNumber) {
+                                  char *serialNumber,
+                                  UA_ByteString certificate) {
     UA_StatusCode ret = UA_STATUSCODE_GOOD;
 
     //gnutls supports serial numbers up to 40 bytes

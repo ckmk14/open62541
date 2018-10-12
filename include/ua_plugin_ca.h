@@ -59,7 +59,8 @@ struct GDS_CA {
 
     UA_StatusCode (*addCertificatetoCRL)(GDS_CA *scg,
                                         size_t serialNumberSize,
-                                        char *serialNumber);
+                                        char *serialNumber,
+                                        UA_ByteString certificate);
 
     UA_StatusCode (*getCertificateStatus)(GDS_CA *scg,
                                          UA_ByteString *certificate,
