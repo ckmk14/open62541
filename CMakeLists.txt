@@ -146,6 +146,10 @@ if((UA_ENABLE_SUBSCRIPTIONS_EVENTS) AND (NOT (UA_ENABLE_SUBSCRIPTIONS AND UA_NAM
     message(FATAL_ERROR "Unable to enable events without UA_ENABLE_SUBSCRIPTIONS and full namespace 0")
 endif()
 
+if((UA_ENABLE_GDS) AND (NOT (UA_NAMESPACE_ZERO STREQUAL "FULL")))
+    message(FATAL_ERROR "Unable to enable GDS without full namespace 0")
+endif()
+
 if(UA_ENABLE_COVERAGE)
     set(CMAKE_BUILD_TYPE DEBUG)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
