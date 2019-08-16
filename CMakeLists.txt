@@ -212,6 +212,14 @@ if(UA_ENABLE_GDS)
     endif()
 endif()
 
+option(UA_ENABLE_GDS_CM "Enable GDS - Certificate Manager (experimental/ uses GnuTLS)" OFF)
+mark_as_advanced(UA_ENABLE_GDS_CM)
+if(UA_ENABLE_GDS_CM)
+    if (NOT UA_ENABLE_GDS)
+        message(FATAL_ERROR "Certificate Manager works only with Registration Manager")
+    endif()
+endif()
+
 option(UA_ENABLE_PUBSUB "Enable publish/subscribe" OFF)
 mark_as_advanced(UA_ENABLE_PUBSUB)
 
@@ -394,6 +402,14 @@ if(UA_ENABLE_ENCRYPTION)
     # defined in /tools/cmake/FindMbedTLS.cmake.
     find_package(MbedTLS REQUIRED)
     list(APPEND open62541_LIBRARIES ${MBEDTLS_LIBRARIES})
+endif()
+
+if(UA_ENABLE_GDS_CM)
+    # The recommended way is to install GnuTLS via the OS package manager. If
+    # that is not possible, manually compile GnuTLS and set the cmake variables
+    # defined in /tools/cmake/FindGnuTLS.cmake.
+    find_package(GnuTLS REQUIRED)
+    list(APPEND open62541_LIBRARIES ${GNUTLS_LIBRARIES})
 endif()
 
 if(UA_ENABLE_WEBSOCKET_SERVER)
@@ -720,9 +736,12 @@ if(UA_ENABLE_DISCOVERY)
 endif()
 
 if (UA_ENABLE_GDS)
-    list(INSERT internal_headers 14 ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.h)
+    list(INSERT internal_headers 14 ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.h
+                                    ${PROJECT_SOURCE_DIR}/include/open62541/plugin/ca.h)
     list(APPEND lib_sources ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.c)
     list(APPEND lib_sources ${PROJECT_SOURCE_DIR}/src/gds/ua_gds_ns.c)
+    list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/ca_gnuTLS.h)
+    list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_gds_gnuTLS_ca.c)
 endif()
 
 if(UA_ENABLE_PUBSUB)

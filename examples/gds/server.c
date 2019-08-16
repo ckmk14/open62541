@@ -16,11 +16,6 @@ int main(void) {
     signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
 
-//    UA_ServerConfig *config = UA_ServerConfig_new_minimal(4841, NULL);
-//
-//    UA_Server *server = UA_Server_new(config);
-//    UA_Server_run(server, &running);
-
     UA_Server *server = UA_Server_new();
     UA_ServerConfig_setDefault(UA_Server_getConfig(server));
 
@@ -28,5 +23,4 @@ int main(void) {
 
     UA_Server_delete(server);
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
-    return 0;
 }

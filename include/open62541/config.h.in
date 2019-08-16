@@ -39,6 +39,7 @@
 #cmakedefine UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #cmakedefine UA_ENABLE_JSON_ENCODING
 #cmakedefine UA_ENABLE_GDS
+#cmakedefine UA_ENABLE_GDS_CM
 
 /* Multithreading */
 #cmakedefine UA_ENABLE_MULTITHREADING
