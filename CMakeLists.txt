@@ -204,6 +204,14 @@ endif()
 option(UA_ENABLE_CUSTOM_NODESTORE "Do not compile the default Nodestore implementation into the library" OFF)
 mark_as_advanced(UA_ENABLE_CUSTOM_NODESTORE)
 
+option(UA_ENABLE_GDS "Enable GDS - Registration Manager (experimental)" OFF)
+mark_as_advanced(UA_ENABLE_GDS)
+if(UA_ENABLE_GDS)
+    if (NOT (UA_NAMESPACE_ZERO STREQUAL "FULL"))
+        message(FATAL_ERROR "GDS requires full namespace zero")
+    endif()
+endif()
+
 option(UA_ENABLE_PUBSUB "Enable publish/subscribe" OFF)
 mark_as_advanced(UA_ENABLE_PUBSUB)
 
@@ -709,6 +717,12 @@ endif()
 if(UA_ENABLE_DISCOVERY)
     list(INSERT internal_headers 13 ${PROJECT_SOURCE_DIR}/src/server/ua_discovery_manager.h)
     list(APPEND lib_sources ${PROJECT_SOURCE_DIR}/src/server/ua_discovery_manager.c)
+endif()
+
+if (UA_ENABLE_GDS)
+    list(INSERT internal_headers 14 ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.h)
+    list(APPEND lib_sources ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.c)
+    list(APPEND lib_sources ${PROJECT_SOURCE_DIR}/src/gds/ua_gds_ns.c)
 endif()
 
 if(UA_ENABLE_PUBSUB)

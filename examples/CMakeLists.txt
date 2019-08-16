@@ -97,6 +97,10 @@ if(UA_ENABLE_SUBSCRIPTIONS_EVENTS)
     add_example(tutorial_server_events tutorial_server_events.c)
 endif()
 
+if(UA_ENABLE_GDS)
+    add_example(gds_server gds/server.c)
+endif()
+
 ##################
 # Example Server #
 ##################
