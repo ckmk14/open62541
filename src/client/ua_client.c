@@ -23,6 +23,10 @@
 #include "ua_connection_internal.h"
 #include "ua_types_encoding_binary.h"
 
+#ifdef UA_ENABLE_GDS_CLIENT
+#include "ua_gds_client.h"
+#endif
+
 #define STATUS_CODE_BAD_POINTER 0x01
 
 /********************/
@@ -39,6 +43,10 @@ UA_Client_init(UA_Client* client) {
 
     UA_Timer_init(&client->timer);
     UA_WorkQueue_init(&client->workQueue);
+
+#ifdef UA_ENABLE_GDS_CLIENT
+    UA_GDS_Client_init(client);
+#endif
 }
 
 UA_Client UA_EXPORT *
@@ -117,6 +125,9 @@ UA_Client_reset(UA_Client* client) {
 
 void
 UA_Client_delete(UA_Client* client) {
+#ifdef UA_ENABLE_GDS_CLIENT
+    UA_GDS_Client_deinit(client);
+#endif
     UA_Client_deleteMembers(client);
     UA_ClientConfig_deleteMembers(&client->config);
     UA_free(client);

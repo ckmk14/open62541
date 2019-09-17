@@ -227,6 +227,9 @@ if(UA_ENABLE_GDS_CM)
     endif()
 endif()
 
+option(UA_ENABLE_GDS_CLIENT "Enable functions to access the Global Discovery Server" OFF)
+mark_as_advanced(UA_ENABLE_GDS_CLIENT)
+
 option(UA_ENABLE_PUBSUB "Enable publish/subscribe" OFF)
 mark_as_advanced(UA_ENABLE_PUBSUB)
 
@@ -668,6 +671,7 @@ set(exported_headers ${exported_headers}
                      ${PROJECT_SOURCE_DIR}/deps/ziptree.h
                      ${PROJECT_SOURCE_DIR}/include/open62541/plugin/nodestore.h
                      ${PROJECT_SOURCE_DIR}/include/open62541/plugin/gds_ca.h
+                     ${PROJECT_SOURCE_DIR}/src/gds/ua_gds_client.h
                      ${historizing_exported_headers}
                      ${PROJECT_SOURCE_DIR}/include/open62541/server_config.h
                      ${PROJECT_SOURCE_DIR}/include/open62541/client_config.h
@@ -814,6 +818,10 @@ if(UA_ENABLE_GDS)
         list(INSERT internal_headers  15 ${PROJECT_SOURCE_DIR}/src/gds/ua_certificate_manager.h)
         list(APPEND lib_sources ${PROJECT_SOURCE_DIR}/src/gds/ua_certificate_manager.c)
     endif()
+endif()
+
+if(UA_ENABLE_GDS_CLIENT)
+    list(APPEND lib_sources ${PROJECT_SOURCE_DIR}/src/gds/ua_gds_client.c)
 endif()
 
 if(UA_ENABLE_PUBSUB)
