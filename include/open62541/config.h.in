@@ -65,6 +65,7 @@
 #cmakedefine UA_GENERATED_NAMESPACE_ZERO
 #cmakedefine UA_ENABLE_PUBSUB_CUSTOM_PUBLISH_HANDLING
 #cmakedefine UA_ENABLE_GDS
+#cmakedefine UA_ENABLE_GDS_CM
 
 #cmakedefine UA_PACK_DEBIAN
 
