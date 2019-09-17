@@ -204,6 +204,11 @@ void UA_Server_delete(UA_Server *server) {
     UA_DiscoveryManager_deleteMembers(&server->discoveryManager, server);
 #endif
 
+#ifdef UA_ENABLE_GDS
+    UA_GDS_RegistrationManager_close(server);
+    UA_GDS_deinitNS(server);
+#endif
+
 #if UA_MULTITHREADING >= 100
     UA_AsyncManager_clear(&server->asyncManager, server);
 #endif
@@ -320,6 +325,11 @@ UA_Server_init(UA_Server *server) {
     /* Build PubSub information model */
 #ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL
     UA_Server_initPubSubNS0(server);
+#endif
+
+#ifdef UA_ENABLE_GDS
+    UA_GDS_initNS(server);
+    UA_GDS_RegistrationManager_init(server);
 #endif
 
     return server;

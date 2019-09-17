@@ -186,6 +186,10 @@ if(UA_ENABLE_DISCOVERY_MULTICAST)
     add_example(discovery_server_multicast discovery/server_multicast.c)
 endif()
 
+if(UA_ENABLE_GDS)
+    add_example(gds_server gds/server.c)
+endif()
+
 add_subdirectory(nodeset)
 
 ####################

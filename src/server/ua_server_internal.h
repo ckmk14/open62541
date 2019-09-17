@@ -42,6 +42,10 @@ _UA_BEGIN_DECLS
 #include "ua_discovery_manager.h"
 #endif
 
+#ifdef UA_ENABLE_GDS
+#include "ua_registration_manager.h"
+#endif
+
 #ifdef UA_ENABLE_SUBSCRIPTIONS
 #include "ua_subscription.h"
 
@@ -124,6 +128,11 @@ struct UA_Server {
     /* Discovery */
 #ifdef UA_ENABLE_DISCOVERY
     UA_DiscoveryManager discoveryManager;
+#endif
+
+#ifdef UA_ENABLE_GDS
+    LIST_HEAD(gds_list, gds_registeredServer_entry) gds_registeredServers_list;
+    size_t gds_registeredServersSize;
 #endif
 
     /* DataChange Subscriptions */
@@ -389,6 +398,15 @@ register_server_with_discovery_server(UA_Server *server,
                                       const UA_Boolean isUnregister,
                                       const char* semaphoreFilePath);
 #endif
+
+/**********************/
+/* Create Namespace for GDS */
+/**********************/
+#ifdef UA_ENABLE_GDS
+UA_StatusCode UA_GDS_initNS(UA_Server *server);
+UA_StatusCode UA_GDS_deinitNS(UA_Server *server);
+#endif
+
 /***************************************/
 /* Check Information Model Consistency */
 /***************************************/

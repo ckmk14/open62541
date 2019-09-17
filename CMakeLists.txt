@@ -211,6 +211,14 @@ endif()
 option(UA_ENABLE_EXPERIMENTAL_HISTORIZING "Enable client experimental historical access features" OFF)
 mark_as_advanced(UA_ENABLE_EXPERIMENTAL_HISTORIZING)
 
+option(UA_ENABLE_GDS "Enable GDS - Registration Manager (experimental)" OFF)
+mark_as_advanced(UA_ENABLE_GDS)
+if(UA_ENABLE_GDS)
+    if (NOT (UA_NAMESPACE_ZERO STREQUAL "FULL"))
+        message(FATAL_ERROR "GDS requires full namespace zero")
+    endif()
+endif()
+
 option(UA_ENABLE_PUBSUB "Enable publish/subscribe" OFF)
 mark_as_advanced(UA_ENABLE_PUBSUB)
 
@@ -779,6 +787,12 @@ if(UA_ENABLE_DISCOVERY)
     list(APPEND lib_sources ${PROJECT_SOURCE_DIR}/src/server/ua_discovery_manager.c)
 endif()
 
+if(UA_ENABLE_GDS)
+    list(INSERT internal_headers  14 ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.h)
+    list(APPEND lib_sources ${PROJECT_SOURCE_DIR}/src/gds/ua_gds_ns.c
+                            ${PROJECT_SOURCE_DIR}/src/gds/ua_registration_manager.c)
+endif()
+
 if(UA_ENABLE_PUBSUB)
     list(APPEND default_plugin_headers ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/pubsub_udp.h)
     list(APPEND default_plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_pubsub_udp.c)
@@ -1118,6 +1132,7 @@ else()
                                "${PROJECT_SOURCE_DIR}/plugins/include"
                                "${PROJECT_SOURCE_DIR}/deps"
                                "${PROJECT_SOURCE_DIR}/src/pubsub"
+                               "${PROJECT_SOURCE_DIR}/src/gds"
                                "${PROJECT_BINARY_DIR}/src_generated")
 
     # Private includes
