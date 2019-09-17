@@ -16,6 +16,9 @@
 #ifdef UA_ENABLE_WEBSOCKET_SERVER
 #include <open62541/network_ws.h>
 #endif
+#ifdef UA_ENABLE_GDS_CM
+#include <open62541/plugin/gds_ca_gnutls.h>
+#endif
 #include <open62541/plugin/accesscontrol_default.h>
 #include <open62541/plugin/nodestore_default.h>
 #include <open62541/plugin/log_stdout.h>
@@ -106,6 +109,30 @@ createEndpoint(UA_ServerConfig *conf, UA_EndpointDescription *endpoint,
     return UA_STATUSCODE_GOOD;
 }
 
+#ifdef UA_ENABLE_GDS_CM
+static UA_StatusCode createDefaultCertificateGroup(UA_ServerConfig *conf){
+    conf->gds_certificateGroupSize = 1;
+    conf->gds_certificateGroups = (UA_GDS_CertificateGroup *)UA_malloc(sizeof(UA_GDS_CertificateGroup));
+    conf->gds_certificateGroups[0].certificateGroupId = UA_NODEID_NUMERIC(2, 615);
+    conf->gds_certificateGroups[0].trustListId = UA_NODEID_NUMERIC(2, 616);
+    conf->gds_certificateGroups[0].ca = (UA_GDS_CA *)UA_malloc(sizeof(UA_GDS_CA));
+    conf->gds_certificateGroups[0].certificateTypesSize = 2;
+    conf->gds_certificateGroups[0].certificateTypes =  (UA_NodeId *)UA_malloc(2 * sizeof(UA_NodeId));
+    conf->gds_certificateGroups[0].certificateTypes[0] =
+            UA_NODEID_NUMERIC(0, UA_NS0ID_RSAMINAPPLICATIONCERTIFICATETYPE);
+    conf->gds_certificateGroups[0].certificateTypes[1] =
+            UA_NODEID_NUMERIC(0, UA_NS0ID_RSASHA256APPLICATIONCERTIFICATETYPE);
+    UA_String name = UA_STRING("O=open62541,CN=GDS@localhost");
+    char serialNumber[2] = {0, 127};
+
+    UA_initCA(conf->gds_certificateGroups->ca,
+              name, (60 * 60 * 24 * 365 * 10),
+              2, serialNumber, 2048, &conf->logger);
+
+    return UA_STATUSCODE_GOOD;
+}
+#endif
+
 static const size_t usernamePasswordsSize = 2;
 static UA_UsernamePasswordLogin usernamePasswords[2] = {
     {UA_STRING_STATIC("user1"), UA_STRING_STATIC("password")},
@@ -161,6 +188,10 @@ setDefaultConfig(UA_ServerConfig *conf) {
     conf->discovery.ipAddressList = NULL;
     conf->discovery.ipAddressListSize = 0;
 # endif
+#endif
+
+#ifdef UA_ENABLE_GDS_CM
+    createDefaultCertificateGroup(conf);
 #endif
 
     /* Custom DataTypes */

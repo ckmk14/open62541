@@ -6,6 +6,9 @@
  */
 
 #include <open62541/server_config.h>
+#ifdef UA_ENABLE_GDS_CM
+#include <open62541/plugin/gds_ca_gnutls.h>
+#endif
 
 void
 UA_ServerConfig_clean(UA_ServerConfig *config) {
@@ -70,6 +73,16 @@ UA_ServerConfig_clean(UA_ServerConfig *config) {
 #ifdef UA_ENABLE_HISTORIZING
     if(config->historyDatabase.clear)
         config->historyDatabase.clear(&config->historyDatabase);
+#endif
+
+#ifdef UA_ENABLE_GDS_CM
+    for(size_t i = 0; i < config->gds_certificateGroupSize; ++i) {
+        UA_free(config->gds_certificateGroups[i].certificateTypes);
+        UA_GDS_CA *ca = config->gds_certificateGroups[i].ca;
+        ca->deleteMembers(ca);
+        UA_free(ca);
+    }
+    UA_free(config->gds_certificateGroups);
 #endif
 
     /* Logger */

@@ -27,6 +27,10 @@
 #include <open62541/plugin/historydatabase.h>
 #endif
 
+#ifdef UA_ENABLE_GDS_CM
+#include <open62541/plugin/gds_ca.h>
+#endif
+
 _UA_BEGIN_DECLS
 
 /**
@@ -130,6 +134,12 @@ struct UA_ServerConfig {
     size_t pubsubTransportLayersSize;
     UA_PubSubTransportLayer *pubsubTransportLayers;
 #endif
+
+#ifdef UA_ENABLE_GDS_CM
+    size_t gds_certificateGroupSize;
+    UA_GDS_CertificateGroup *gds_certificateGroups;
+#endif
+
 
     /* Available security policies */
     size_t securityPoliciesSize;
