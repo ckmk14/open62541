@@ -1009,27 +1009,27 @@ createDirectoryObject(UA_Server *server, UA_UInt16 ns_index){
 }
 
 
-static
-UA_DataTypeArray *UA_GDS_DataTypeArray;
-
-static
-UA_StatusCode addApplicationRecordDataType(UA_Server *server) {
-    UA_DataTypeArray init = { server->config.customDataTypes, 1, &ApplicationRecordDataType};
-    UA_GDS_DataTypeArray = (UA_DataTypeArray*) UA_malloc(sizeof(UA_DataTypeArray));
-    memcpy(UA_GDS_DataTypeArray, &init, sizeof(init));
-    server->config.customDataTypes = UA_GDS_DataTypeArray;
-    return UA_STATUSCODE_GOOD;
-}
-
-UA_StatusCode UA_GDS_deinitNS(UA_Server *server) {
-    server->config.customDataTypes = UA_GDS_DataTypeArray->next;
-    UA_free(UA_GDS_DataTypeArray);
-    return UA_STATUSCODE_GOOD;
-}
+//static
+//UA_DataTypeArray *UA_GDS_DataTypeArray;
+//
+//static
+//UA_StatusCode addApplicationRecordDataType(UA_Server *server) {
+//    UA_DataTypeArray init = { server->config.customDataTypes, 1, &ApplicationRecordDataType};
+//    UA_GDS_DataTypeArray = (UA_DataTypeArray*) UA_malloc(sizeof(UA_DataTypeArray));
+//    memcpy(UA_GDS_DataTypeArray, &init, sizeof(init));
+//    server->config.customDataTypes = UA_GDS_DataTypeArray;
+//    return UA_STATUSCODE_GOOD;
+//}
+//
+//UA_StatusCode UA_GDS_deinitNS(UA_Server *server) {
+//    server->config.customDataTypes = UA_GDS_DataTypeArray->next;
+//    UA_free(UA_GDS_DataTypeArray);
+//    return UA_STATUSCODE_GOOD;
+//}
 
 UA_StatusCode UA_GDS_initNS(UA_Server *server) {
     UA_UInt16 ns_index = UA_Server_addNamespace(server, "http://opcfoundation.org/UA/GDS/");
-    addApplicationRecordDataType(server);
+   // addApplicationRecordDataType(server);
     addDirectoryType(server, ns_index);  //Part 12, page 14
 
 #ifdef UA_ENABLE_GDS_CM

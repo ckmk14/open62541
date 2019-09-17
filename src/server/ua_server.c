@@ -213,7 +213,7 @@ void UA_Server_delete(UA_Server *server) {
 #ifdef UA_ENABLE_GDS_CM
     UA_GDS_CertificateManager_close(server);
 #endif
-    UA_GDS_deinitNS(server);
+   // UA_GDS_deinitNS(server);
 #endif
 
 #if UA_MULTITHREADING >= 100

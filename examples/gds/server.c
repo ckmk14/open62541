@@ -4,6 +4,7 @@
 
 #include <signal.h>
 #include <stdlib.h>
+#include "ua_record_datatype.h"
 
 static volatile UA_Boolean running = true;
 static void stopHandler(int sig) {
@@ -16,7 +17,11 @@ int main(void) {
     signal(SIGTERM, stopHandler);
 
     UA_Server *server = UA_Server_new();
-    UA_ServerConfig_setDefault(UA_Server_getConfig(server));
+    UA_ServerConfig *config = UA_Server_getConfig(server);
+    UA_ServerConfig_setDefault(config);
+
+    UA_DataTypeArray tmp = { config->customDataTypes, 1, &ApplicationRecordDataType};
+    config->customDataTypes = &tmp;
 
     UA_StatusCode retval = UA_Server_run(server, &running);
 

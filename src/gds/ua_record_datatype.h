@@ -83,11 +83,11 @@ static UA_DataTypeMember ApplicationRecordDataType_members[7] = {
 
 static const UA_DataType ApplicationRecordDataType = {
         UA_TYPENAME("ApplicationRecordDataType")/* .typeName */
-        {3, UA_NODEIDTYPE_NUMERIC, {138}},      /* .typeId */
+        {2, UA_NODEIDTYPE_NUMERIC, {1}},      /* .typeId */
         sizeof(UA_ApplicationRecordDataType),   /* .memSize */
         0,                               /* .typeIndex, in the array of custom types */
         UA_DATATYPEKIND_STRUCTURE,       /* .typeKind */
-        true,                            /* .pointerFree */
+        false,                            /* .pointerFree */
         false,                           /* .overlayable (depends on endianness and
                                          the absence of padding) */
         7,                               /* .membersSize */

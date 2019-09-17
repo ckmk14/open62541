@@ -410,7 +410,7 @@ register_server_with_discovery_server(UA_Server *server,
 /**********************/
 #ifdef UA_ENABLE_GDS
 UA_StatusCode UA_GDS_initNS(UA_Server *server);
-UA_StatusCode UA_GDS_deinitNS(UA_Server *server);
+//UA_StatusCode UA_GDS_deinitNS(UA_Server *server);
 #endif
 
 /***************************************/
