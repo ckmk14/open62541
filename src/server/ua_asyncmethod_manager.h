@@ -8,7 +8,7 @@
  *    Copyright 2014, 2017 (c) Florian Palm
  *    Copyright 2015 (c) Sten Grüner
  *    Copyright 2015 (c) Oleksiy Vasylyev
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
+ *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH 
  */
 
 #ifndef UA_ASYNCMETHOD_MANAGER_H_
