@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
        //Request a new application instance certificate (with the associated private key)
         UA_NodeId requestId;
         UA_String subjectName = UA_STRING("C=DE,O=open62541,CN=open62541@localhost");
-        UA_String appURI = UA_STRING("urn:unconfigured:application");
+        UA_String appURI = UA_STRING("urn:open62541.server.application");
         UA_String ipAddress = UA_STRING("192.168.0.1");
         UA_String dnsName = UA_STRING("ILT532-ubuntu");
         UA_String domainNames[3] = {appURI, ipAddress, dnsName};
