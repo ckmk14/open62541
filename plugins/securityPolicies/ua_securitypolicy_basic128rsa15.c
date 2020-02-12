@@ -610,6 +610,48 @@ clear_sp_basic128rsa15(UA_SecurityPolicy *securityPolicy) {
     securityPolicy->policyContext = NULL;
 }
 
+UA_StatusCode
+private_key_abstraction(UA_SecurityPolicy *securityPolicy,
+                                      UA_ByteString *private_key) {
+
+    if (securityPolicy == NULL) {
+        return UA_STATUSCODE_BADINTERNALERROR;
+    }
+
+    if (securityPolicy->policyContext == NULL) {
+        return UA_STATUSCODE_BADINTERNALERROR;
+    }
+
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    Basic128Rsa15_PolicyContext *pc = (Basic128Rsa15_PolicyContext *)securityPolicy->policyContext;
+
+    /* To Do: Buffer length has to be modified */
+    unsigned char output_buffer[16000];
+    UA_ByteString privkey_buffer;
+    privkey_buffer.data = output_buffer;
+
+    memset(output_buffer, 0, 16000);
+
+    int ret = mbedtls_pk_write_key_der(&pc->localPrivateKey, output_buffer, 16000);
+    if (ret <= 0) {
+        return UA_STATUSCODE_BADINTERNALERROR;
+    }
+    privkey_buffer.length = (size_t)ret;
+    privkey_buffer.data = output_buffer + sizeof(output_buffer) - privkey_buffer.length;
+
+    /* Private key has been copied to the buffer */
+    retval = UA_ByteString_allocBuffer(private_key, privkey_buffer.length + 1);
+    if(retval != UA_STATUSCODE_GOOD) {
+        return retval;
+    }
+    memcpy(private_key->data, privkey_buffer.data, privkey_buffer.length);
+    private_key->data[privkey_buffer.length] = '\0';
+    private_key->length--;
+
+    return retval;
+}
+
+
 static UA_StatusCode
 updateCertificateAndPrivateKey_sp_basic128rsa15(UA_SecurityPolicy *securityPolicy,
                                                 const UA_ByteString newCertificate,
@@ -631,15 +673,17 @@ updateCertificateAndPrivateKey_sp_basic128rsa15(UA_SecurityPolicy *securityPolic
     securityPolicy->localCertificate.data[newCertificate.length] = '\0';
     securityPolicy->localCertificate.length--;
 
-    /* Set the new private key */
-    mbedtls_pk_free(&pc->localPrivateKey);
-    mbedtls_pk_init(&pc->localPrivateKey);
-    int mbedErr = mbedtls_pk_parse_key(&pc->localPrivateKey,
-                                       newPrivateKey.data, newPrivateKey.length,
-                                       NULL, 0);
-    if(mbedErr) {
-        retval = UA_STATUSCODE_BADSECURITYCHECKSFAILED;
-        goto error;
+    if (!UA_ByteString_equal(&newPrivateKey, &UA_BYTESTRING_NULL)) {
+        /* Set the new private key */
+        mbedtls_pk_free(&pc->localPrivateKey);
+        mbedtls_pk_init(&pc->localPrivateKey);
+        int mbedErr = mbedtls_pk_parse_key(&pc->localPrivateKey,
+                                           newPrivateKey.data, newPrivateKey.length,
+                                           NULL, 0);
+        if(mbedErr) {
+            retval = UA_STATUSCODE_BADSECURITYCHECKSFAILED;
+            goto error;
+        }
     }
 
     retval = asym_makeThumbprint_sp_basic128rsa15(pc->securityPolicy,

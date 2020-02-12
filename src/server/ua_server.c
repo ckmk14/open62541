@@ -243,6 +243,295 @@ void UA_Server_delete(UA_Server *server) {
     UA_free(server);
 }
 
+#ifdef UA_ENABLE_SERVER_PUSH
+UA_StatusCode copy_private_key_gnu_struc(gnutls_datum_t *data_privkey, UA_ByteString *privkey_copy) {
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    data_privkey->data = (unsigned char *)UA_malloc(privkey_copy->length + 1);
+    if (data_privkey->data == NULL)
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+
+    data_privkey->size = (unsigned int)(privkey_copy->length + 1);
+
+    memcpy(data_privkey->data, privkey_copy->data, privkey_copy->length);
+    data_privkey->data[privkey_copy->length] = '\0';
+    data_privkey->size--;
+
+    return retval;
+}
+
+/* To Do: Need to move it to the plugin file*/
+/* Creation of Certificate Signing Request */
+UA_StatusCode create_csr(UA_Server *server, UA_String *subjectName,
+                         UA_ByteString *certificateRequest) {
+
+    gnutls_x509_crq_t crq;
+    gnutls_x509_privkey_t private_key;
+    UA_String subjectName_nullTerminated;
+    unsigned char buffer[10 * 1024];
+    size_t buffer_size   = sizeof(buffer);
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+
+    /* Initialize an empty certificate request */
+    int gnuErr = gnutls_x509_crq_init(&crq);
+    if (gnuErr < 0) {
+        gnutls_x509_crq_deinit(crq);
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+    }
+
+    /* Initialize an empty private key */
+    gnutls_x509_privkey_init(&private_key);
+    /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADOUTOFMEMORY); */
+
+    if ((server->config.regeneratePrivateKey) == 1) {
+        unsigned int security_bits;
+
+        /****** To-do: Nonce the additional entropy functionality ******/
+
+        /* Generate an RSA key of high security */
+        security_bits = gnutls_sec_param_to_pk_bits(GNUTLS_PK_RSA,
+                                                    GNUTLS_SEC_PARAM_HIGH);
+
+        /* Create a private key */
+        gnutls_x509_privkey_generate(private_key, GNUTLS_PK_RSA, security_bits, 0);
+        /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADINTERNALERROR); */
+
+        /******* To-do: Private key storage and upload while calling UpdateCertificate method ******/
+    }
+    else {
+        gnutls_datum_t data_privkey;
+        UA_ByteString privkey_copy;
+
+        UA_SecurityPolicy *securityPolicy = &server->config.endpoints[1].securityPolicy;
+        retval = private_key_abstraction(securityPolicy, &privkey_copy);
+        if(retval != UA_STATUSCODE_GOOD)
+            return retval;
+
+        retval = copy_private_key_gnu_struc(&data_privkey, &privkey_copy);
+
+        gnuErr = gnutls_x509_privkey_import2(private_key, &data_privkey,
+                                             GNUTLS_X509_FMT_DER, NULL, 0);
+        if (gnuErr < 0) {
+            return UA_STATUSCODE_BADINTERNALERROR;
+        }
+
+    }
+
+    //gnutls_x509_crt_set_dn requires null terminated string
+    subjectName_nullTerminated.length = subjectName->length + 1;
+    subjectName_nullTerminated.data = (UA_Byte *)
+            UA_calloc(subjectName_nullTerminated.length, sizeof(UA_Byte));
+    memcpy(subjectName_nullTerminated.data, subjectName->data, subjectName->length);
+    subjectName_nullTerminated.length--;
+
+    /* Add subject name to the distinguished name */
+    gnuErr = gnutls_x509_crq_set_dn(crq, (char *) subjectName_nullTerminated.data, NULL);
+    /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED); */
+
+    /* Set the request version to 3 */
+    gnuErr = gnutls_x509_crq_set_version(crq, 3);
+    /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED); */
+
+    /* Associate the request with the private key */
+    gnuErr = gnutls_x509_crq_set_key(crq, private_key);
+    /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED); */
+
+    /* Self sign the certificate request */
+    gnuErr = gnutls_x509_crq_sign2(crq, private_key, GNUTLS_DIG_SHA1, 0);
+    /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED); */
+
+    /* Export the PEM encoded certificate request, and display it */
+    gnuErr = gnutls_x509_crq_export(crq, GNUTLS_X509_FMT_DER, buffer,
+                           &buffer_size);
+    /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED); */
+
+    /* Allocate the output buffer */
+    retval = UA_ByteString_allocBuffer(certificateRequest, buffer_size);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+
+    /* Copy the output to the certificate */
+    certificateRequest->length = buffer_size;
+    //UA_GDS_CM_CHECK_ALLOC(ret);
+    memcpy(certificateRequest->data, buffer, buffer_size);
+
+    return retval;
+
+}
+
+UA_StatusCode server_update_certificate(UA_Server *server, UA_ByteString *newcertificate,
+                                        UA_Boolean *applyChangesRequired) {
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+
+    size_t i = 0;
+    UA_ByteString oldcertificate;
+
+    while (i < server->config.endpointsSize) {
+        UA_EndpointDescription *ed = &server->config.endpoints[i].endpointDescription;
+        if (!UA_ByteString_equal(&ed->serverCertificate, &UA_BYTESTRING_NULL)) {
+            /* Allocate the output buffer */
+            retval = UA_ByteString_allocBuffer(&oldcertificate, ed->serverCertificate.length);
+            if(retval != UA_STATUSCODE_GOOD)
+                return retval;
+            UA_String_copy(&ed->serverCertificate, &oldcertificate);
+            break;
+        }
+        i++;
+    }
+
+    /* To do: Private key pass while regen priv key is 1 */
+    retval = UA_Server_updateCertificate(server, &oldcertificate, newcertificate, &UA_BYTESTRING_NULL, 0, 0);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+
+    (server->config.regeneratePrivateKey) = 0;
+    /* To do: The check has to be fixed */
+    if (UA_ByteString_equal(newcertificate, &server->config.endpoints[0].endpointDescription.serverCertificate)) {
+        *applyChangesRequired = 0;
+        return retval;
+    }
+    else {
+        *applyChangesRequired = 1;
+    }
+    return retval;
+}
+
+UA_StatusCode
+UA_GDS_CreateSigningRequest(UA_Server *server,
+                            UA_NodeId *certificateGroupId,
+                            UA_NodeId *certificateTypeId,
+                            UA_String *subjectName,
+                            UA_Boolean *regeneratePrivateKey,
+                            UA_ByteString *nonce,
+                            UA_ByteString *certificateRequest){
+
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    UA_ByteString output;
+
+    if (subjectName == NULL) {
+        return UA_STATUSCODE_BADINTERNALERROR;
+    }
+    if ((server->config.regeneratePrivateKey) == false) {
+        server->config.regeneratePrivateKey = *regeneratePrivateKey;
+    }
+    else {
+        UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER,
+                    "Not implemented.\n");
+        return UA_STATUSCODE_BADTIMEOUT;
+    }
+
+    /* Create csr for requesting the certificate */
+    retval = create_csr(server, subjectName, &output);
+
+    /* Allocate the output buffer */
+    retval = UA_ByteString_allocBuffer(certificateRequest, output.length);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+
+    /* Copy the output to the certificate */
+    certificateRequest->length = output.length;
+    memcpy(certificateRequest->data, output.data, output.length);
+
+    return retval;
+}
+
+UA_StatusCode
+UA_GDS_UpdateCertificate(UA_Server *server,
+                         const UA_NodeId *certificateGroupId,
+                         const UA_NodeId *certificateTypeId,
+                         UA_ByteString *certificate,
+                         UA_ByteString *issuerCertificates,
+                         UA_String *privateKeyFormat,
+                         UA_ByteString *privateKey,
+                         UA_Boolean *applyChangesRequired) {
+
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+
+    /* To do: Integrity check of the received certificate */
+    retval = VerifyUpdatedCertificate(certificate, issuerCertificates);
+    if(retval) {
+        return retval;
+    }
+
+    /* To do: Verify the signature of received certificate using issuer certificate */
+
+    /* Verifying the certificates are updated already in the server */
+    size_t i = 0;
+    while (i < server->config.endpointsSize) {
+        if ((&server->config.endpoints[i].endpointDescription.serverCertificate == NULL) ||
+            (&server->config.endpoints[i].securityPolicy.localCertificate == NULL)) {
+            UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER,
+                        "Certificates NULL in the endpoint\n");
+        }
+
+        if (UA_ByteString_equal(certificate, &server->config.endpoints[i].endpointDescription.serverCertificate)) {
+            UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER,
+                        "Certificates are already updated\n");
+            return retval;
+        }
+
+        UA_SecurityPolicy *securityPolicy = &server->config.endpoints[i].securityPolicy;
+        if (UA_ByteString_equal(certificate, &securityPolicy->localCertificate)) {
+            UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER,
+                        "Security policy:Certificates are already updated\n");
+            return retval;
+        }
+        i++;
+    }
+
+    /* Update the certificate after verifying that the certificate is not updated */
+    retval = server_update_certificate(server, certificate, applyChangesRequired);
+    return retval;
+}
+
+/* Callbacks for server push management */
+static UA_StatusCode
+createSigningRequestMethodCallback (UA_Server *server,
+                    const UA_NodeId *sessionId, void *sessionHandle,
+                    const UA_NodeId *methodId, void *methodContext,
+                    const UA_NodeId *objectId, void *objectContext,
+                    size_t inputSize, const UA_Variant *input,
+                    size_t outputSize, UA_Variant *output) {
+    UA_ByteString certrequest ;
+    UA_StatusCode retval = UA_GDS_CreateSigningRequest(server,
+                                                       (UA_NodeId *) input[0].data,
+                                                       (UA_NodeId *) input[1].data,
+                                                       (UA_String *) input[2].data,
+                                                       (UA_Boolean *) input[3].data,
+                                                       (UA_ByteString *) input[4].data,
+                                                       &certrequest);
+
+    if (retval == UA_STATUSCODE_GOOD)
+        UA_Variant_setScalarCopy(output, &certrequest, &UA_TYPES[UA_TYPES_BYTESTRING]);
+
+    return retval;
+}
+
+static UA_StatusCode
+updateCertificateMethodCallback (UA_Server *server,
+                    const UA_NodeId *sessionId, void *sessionHandle,
+                    const UA_NodeId *methodId, void *methodContext,
+                    const UA_NodeId *objectId, void *objectContext,
+                    size_t inputSize, const UA_Variant *input,
+                    size_t outputSize, UA_Variant *output) {
+    UA_Boolean applychanges;
+    UA_StatusCode retval = UA_GDS_UpdateCertificate(server,
+                                                       (UA_NodeId *) input[0].data,
+                                                       (UA_NodeId *) input[1].data,
+                                                       (UA_ByteString *) input[2].data,
+                                                       (UA_ByteString *) input[3].data,
+                                                       (UA_String *) input[4].data,
+                                                       (UA_ByteString *) input[5].data,
+                                                       &applychanges);
+
+    if (retval == UA_STATUSCODE_GOOD) {
+        UA_Variant_setScalarCopy(output, &applychanges, &UA_TYPES[UA_TYPES_BOOLEAN]);
+    }
+
+    return retval;
+}
+
+#endif
+
 /* Recurring cleanup. Removing unused and timed-out channels and sessions */
 static void
 UA_Server_cleanup(UA_Server *server, void *_) {
@@ -255,6 +544,14 @@ UA_Server_cleanup(UA_Server *server, void *_) {
 #endif
     UA_UNLOCK(server->serviceMutex);
 }
+
+#ifdef UA_ENABLE_SERVER_PUSH
+UA_StatusCode UA_SERVER_initpushmanager(UA_Server *server) {
+    UA_Server_setMethodNode_callback(server, UA_NODEID_NUMERIC(0, 12737), &createSigningRequestMethodCallback);
+    UA_Server_setMethodNode_callback(server, UA_NODEID_NUMERIC(0, 13737), &updateCertificateMethodCallback);
+    return UA_STATUSCODE_GOOD;
+}
+#endif
 
 /********************/
 /* Server Lifecycle */
@@ -340,6 +637,10 @@ UA_Server_init(UA_Server *server) {
 #ifdef UA_ENABLE_GDS_CM
     UA_GDS_CertificateManager_init(server);
 #endif
+#endif
+
+#ifdef UA_ENABLE_SERVER_PUSH
+    UA_SERVER_initpushmanager(server);
 #endif
 
     return server;
@@ -442,9 +743,19 @@ UA_Server_updateCertificate(UA_Server *server,
                             const UA_ByteString *newPrivateKey,
                             UA_Boolean closeSessions,
                             UA_Boolean closeSecureChannels) {
-
+#ifndef UA_ENABLE_SERVER_PUSH
     if(!server || !oldCertificate || !newCertificate || !newPrivateKey)
         return UA_STATUSCODE_BADINTERNALERROR;
+#else
+    if ((server->config.regeneratePrivateKey) == 1) {
+        if(!server || !oldCertificate || !newCertificate || !newPrivateKey)
+            return UA_STATUSCODE_BADINTERNALERROR;
+    }
+    else {
+        if(!server || !oldCertificate || !newCertificate)
+            return UA_STATUSCODE_BADINTERNALERROR;
+    }
+#endif
 
     if(closeSessions) {
         session_list_entry *current;

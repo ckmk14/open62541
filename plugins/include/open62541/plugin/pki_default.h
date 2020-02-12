@@ -29,6 +29,10 @@ UA_CertificateVerification_Trustlist(UA_CertificateVerification *cv,
                                      const UA_ByteString *certificateRevocationList,
                                      size_t certificateRevocationListSize);
 
+UA_StatusCode
+VerifyUpdatedCertificate(const UA_ByteString *newCertificate,
+                         const UA_ByteString *issuerCertificate);
+
 #ifdef __linux__ /* Linux only so far */
 UA_EXPORT UA_StatusCode
 UA_CertificateVerification_CertFolders(UA_CertificateVerification *cv,

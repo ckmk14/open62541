@@ -194,6 +194,10 @@ setDefaultConfig(UA_ServerConfig *conf) {
     createDefaultCertificateGroup(conf);
 #endif
 
+#if defined(UA_ENABLE_GDS_CM) && defined(UA_ENABLE_SERVER_PUSH)
+    conf->regeneratePrivateKey = false;
+#endif
+
     /* Custom DataTypes */
     /* conf->customDataTypesSize = 0; */
     /* conf->customDataTypes = NULL; */
