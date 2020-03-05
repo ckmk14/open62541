@@ -5,7 +5,12 @@
  * Before shutdown it has to unregister itself.
  */
 
-#include "open62541.h"
+#include <open62541/plugin/log_stdout.h>
+#include <open62541/client_config_default.h>
+#include <open62541/client_highlevel.h>
+#include <open62541/client_subscriptions.h>
+#include "ua_record_datatype.h"
+#include "ua_gds_client.h"
 #include "common.h"
 
 #define MIN_ARGS           3
@@ -63,8 +68,10 @@ int main(int argc, char **argv) {
     /* The Get endpoint (discovery service) is done with
      * security mode as none to see the server's capability
      * and certificate */
-    client = UA_Client_new(UA_ClientConfig_default);
-    client_push = UA_Client_new(UA_ClientConfig_default);
+    client = UA_Client_new();
+    UA_ClientConfig_setDefault(UA_Client_getConfig(client));
+    client_push = UA_Client_new();
+    UA_ClientConfig_setDefault(UA_Client_getConfig(client_push));
 
     remoteCertificate = UA_ByteString_new();
 
@@ -118,12 +125,11 @@ int main(int argc, char **argv) {
     }
 
     /* Secure client initialization */
-    client = UA_Client_secure_new(UA_ClientConfig_default,
-                                  certificate, privateKey,
-                                  remoteCertificate,
-                                  trustList, trustListSize,
-                                  revocationList, revocationListSize,
-                                  UA_SecurityPolicy_Basic128Rsa15);
+    client= UA_Client_new();
+    UA_ClientConfig *config = UA_Client_getConfig(client);
+    config->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
+    UA_ClientConfig_setDefaultEncryption(config, certificate, privateKey, trustList, trustListSize, revocationList, revocationListSize);
+
     if(client == NULL) {
         UA_ByteString_delete(remoteCertificate); /* Dereference the memory */
         return FAILURE;
@@ -193,12 +199,12 @@ int main(int argc, char **argv) {
     }
 
     /* Secure client initialization */
-    client_push = UA_Client_secure_new(UA_ClientConfig_default,
-                                       certificate, privateKey,
-                                       remoteCertificate,
-                                       trustList1, trustListSize,
-                                       revocationList, revocationListSize,
-                                       UA_SecurityPolicy_Basic128Rsa15);
+    client_push = UA_Client_new();
+    UA_ClientConfig *config_push = UA_Client_getConfig(client_push);
+    config->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
+    UA_ClientConfig_setDefaultEncryption(config_push, certificate, privateKey, trustList, trustListSize, revocationList, revocationListSize);
+
+
     if(client_push == NULL) {
         UA_ByteString_delete(remoteCertificate); /* Dereference the memory */
         return FAILURE;

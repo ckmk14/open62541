@@ -18,6 +18,7 @@
  */
 
 #include "ua_server_internal.h"
+#include "open62541/plugin/pki_default.h"
 
 #ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL
 #include "ua_pubsub_ns0.h"
@@ -301,7 +302,7 @@ UA_StatusCode create_csr(UA_Server *server, UA_String *subjectName,
         gnutls_datum_t data_privkey;
         UA_ByteString privkey_copy;
 
-        UA_SecurityPolicy *securityPolicy = &server->config.endpoints[1].securityPolicy;
+        UA_SecurityPolicy *securityPolicy = &server->config.securityPolicies[1];
         retval = private_key_abstraction(securityPolicy, &privkey_copy);
         if(retval != UA_STATUSCODE_GOOD)
             return retval;
@@ -366,13 +367,13 @@ UA_StatusCode server_update_certificate(UA_Server *server, UA_ByteString *newcer
     UA_ByteString oldcertificate;
 
     while (i < server->config.endpointsSize) {
-        UA_EndpointDescription *ed = &server->config.endpoints[i].endpointDescription;
-        if (!UA_ByteString_equal(&ed->serverCertificate, &UA_BYTESTRING_NULL)) {
+        UA_ByteString *serverCert = &server->config.endpoints[i].serverCertificate;
+        if (!UA_ByteString_equal(serverCert, &UA_BYTESTRING_NULL)) {
             /* Allocate the output buffer */
-            retval = UA_ByteString_allocBuffer(&oldcertificate, ed->serverCertificate.length);
+            retval = UA_ByteString_allocBuffer(&oldcertificate, serverCert->length);
             if(retval != UA_STATUSCODE_GOOD)
                 return retval;
-            UA_String_copy(&ed->serverCertificate, &oldcertificate);
+            UA_String_copy(serverCert, &oldcertificate);
             break;
         }
         i++;
@@ -385,7 +386,7 @@ UA_StatusCode server_update_certificate(UA_Server *server, UA_ByteString *newcer
 
     (server->config.regeneratePrivateKey) = 0;
     /* To do: The check has to be fixed */
-    if (UA_ByteString_equal(newcertificate, &server->config.endpoints[0].endpointDescription.serverCertificate)) {
+    if (UA_ByteString_equal(newcertificate, &server->config.endpoints[0].serverCertificate)) {
         *applyChangesRequired = 0;
         return retval;
     }
@@ -456,20 +457,20 @@ UA_GDS_UpdateCertificate(UA_Server *server,
 
     /* Verifying the certificates are updated already in the server */
     size_t i = 0;
-    while (i < server->config.endpointsSize) {
-        if ((&server->config.endpoints[i].endpointDescription.serverCertificate == NULL) ||
-            (&server->config.endpoints[i].securityPolicy.localCertificate == NULL)) {
+    while (i < server->config.securityPoliciesSize) {
+        if ((&server->config.endpoints[i].serverCertificate == &UA_BYTESTRING_NULL) ||
+            (&server->config.securityPolicies[i].localCertificate == &UA_BYTESTRING_NULL)) {
             UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER,
                         "Certificates NULL in the endpoint\n");
         }
 
-        if (UA_ByteString_equal(certificate, &server->config.endpoints[i].endpointDescription.serverCertificate)) {
+        if (UA_ByteString_equal(certificate, &server->config.endpoints[i].serverCertificate)) {
             UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER,
                         "Certificates are already updated\n");
             return retval;
         }
 
-        UA_SecurityPolicy *securityPolicy = &server->config.endpoints[i].securityPolicy;
+        UA_SecurityPolicy *securityPolicy = &server->config.securityPolicies[i];
         if (UA_ByteString_equal(certificate, &securityPolicy->localCertificate)) {
             UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER,
                         "Security policy:Certificates are already updated\n");

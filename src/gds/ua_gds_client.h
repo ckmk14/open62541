@@ -1,3 +1,4 @@
+
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -12,8 +13,8 @@
 extern "C" {
 #endif
 
-
 #include "ua_record_datatype.h"
+#include <open62541/client_highlevel.h>
 
 #ifdef UA_ENABLE_GDS_CLIENT /* conditional compilation */
 
@@ -47,6 +48,15 @@ UA_StatusCode UA_GDS_call_createSigningRequest(UA_Client *client,
                                                UA_Boolean *regeneratePrivateKey,
                                                const UA_ByteString *nonce,
                                                UA_ByteString *certificateRequest);
+
+UA_StatusCode UA_GDS_call_updateCertificates(UA_Client *client,
+                                             const UA_NodeId *certificateGroupId,
+                                             const UA_NodeId *certificateTypeId,
+                                             UA_ByteString *certificate,
+                                             UA_ByteString *issuerCertificates,
+                                             const UA_String *privateKeyFormat,
+                                             UA_ByteString *privateKey,
+                                             UA_Boolean *applyChangesRequired);
 
 UA_StatusCode
 UA_GDS_call_startNewKeyPairRequest(UA_Client *client,
