@@ -70,6 +70,7 @@ int main(int argc, char **argv) {
      * and certificate */
     client = UA_Client_new();
     UA_ClientConfig_setDefault(UA_Client_getConfig(client));
+
     client_push = UA_Client_new();
     UA_ClientConfig_setDefault(UA_Client_getConfig(client_push));
 
@@ -279,6 +280,12 @@ int main(int argc, char **argv) {
             UA_GDS_call_updateCertificates(client_push, &UA_NODEID_NULL, &UA_NODEID_NULL,
                                            &certificate_gds, &issuerCertificate, &privateKeyFormat, &privateKey_gds, &applyChanges);
         }
+
+        UA_ByteString_clear(&certificate_gds);
+        UA_ByteString_clear(&privateKey_gds);
+        UA_ByteString_clear(&issuerCertificate);
+        UA_ByteString_clear(&certificaterequest);
+
     }
 
     UA_String_deleteMembers(&applicationUri);

@@ -256,7 +256,6 @@ UA_StatusCode copy_private_key_gnu_struc(gnutls_datum_t *data_privkey, UA_ByteSt
     memcpy(data_privkey->data, privkey_copy->data, privkey_copy->length);
     data_privkey->data[privkey_copy->length] = '\0';
     data_privkey->size--;
-
     return retval;
 }
 
@@ -314,7 +313,8 @@ UA_StatusCode create_csr(UA_Server *server, UA_String *subjectName,
         if (gnuErr < 0) {
             return UA_STATUSCODE_BADINTERNALERROR;
         }
-
+        UA_ByteString_clear(&privkey_copy);
+        gnutls_free(data_privkey.data);
     }
 
     //gnutls_x509_crt_set_dn requires null terminated string
@@ -328,6 +328,15 @@ UA_StatusCode create_csr(UA_Server *server, UA_String *subjectName,
     gnuErr = gnutls_x509_crq_set_dn(crq, (char *) subjectName_nullTerminated.data, NULL);
     /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED); */
 
+    UA_String san_nullTerminated;
+    san_nullTerminated.length = server->config.applicationDescription.applicationUri.length + 1;
+    san_nullTerminated.data = (UA_Byte *)
+            UA_calloc(san_nullTerminated.length, sizeof(UA_Byte));
+    memcpy(san_nullTerminated.data, server->config.applicationDescription.applicationUri.data, server->config.applicationDescription.applicationUri.length);
+    san_nullTerminated.length--;
+
+    gnuErr= gnutls_x509_crq_set_subject_alt_name(crq, GNUTLS_SAN_URI,server->config.applicationDescription.applicationUri.data,
+                                                 (unsigned int) server->config.applicationDescription.applicationUri.length, GNUTLS_FSAN_SET);
     /* Set the request version to 3 */
     gnuErr = gnutls_x509_crq_set_version(crq, 3);
     /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED); */
@@ -355,6 +364,15 @@ UA_StatusCode create_csr(UA_Server *server, UA_String *subjectName,
     //UA_GDS_CM_CHECK_ALLOC(ret);
     memcpy(certificateRequest->data, buffer, buffer_size);
 
+    if (!UA_String_equal(&subjectName_nullTerminated, &UA_STRING_NULL)) {
+        UA_String_deleteMembers(&subjectName_nullTerminated);
+    }
+    if (!UA_String_equal(&san_nullTerminated, &UA_STRING_NULL)) {
+        UA_String_deleteMembers(&san_nullTerminated);
+    }
+    gnutls_x509_privkey_deinit(private_key);
+    gnutls_x509_crq_deinit(crq);
+
     return retval;
 
 }
@@ -373,7 +391,7 @@ UA_StatusCode server_update_certificate(UA_Server *server, UA_ByteString *newcer
             retval = UA_ByteString_allocBuffer(&oldcertificate, serverCert->length);
             if(retval != UA_STATUSCODE_GOOD)
                 return retval;
-            UA_String_copy(serverCert, &oldcertificate);
+            memcpy(oldcertificate.data, serverCert->data, serverCert->length);
             break;
         }
         i++;
@@ -381,6 +399,7 @@ UA_StatusCode server_update_certificate(UA_Server *server, UA_ByteString *newcer
 
     /* To do: Private key pass while regen priv key is 1 */
     retval = UA_Server_updateCertificate(server, &oldcertificate, newcertificate, &UA_BYTESTRING_NULL, 0, 0);
+    UA_ByteString_clear(&oldcertificate);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
@@ -431,6 +450,7 @@ UA_GDS_CreateSigningRequest(UA_Server *server,
     /* Copy the output to the certificate */
     certificateRequest->length = output.length;
     memcpy(certificateRequest->data, output.data, output.length);
+    UA_ByteString_clear(&output);
 
     return retval;
 }
@@ -464,7 +484,7 @@ UA_GDS_UpdateCertificate(UA_Server *server,
                         "Certificates NULL in the endpoint\n");
         }
 
-        if (UA_ByteString_equal(certificate, &server->config.endpoints[i].serverCertificate)) {
+        if (&server->config.endpoints[i].serverCertificate == certificate) {
             UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER,
                         "Certificates are already updated\n");
             return retval;
@@ -504,6 +524,7 @@ createSigningRequestMethodCallback (UA_Server *server,
     if (retval == UA_STATUSCODE_GOOD)
         UA_Variant_setScalarCopy(output, &certrequest, &UA_TYPES[UA_TYPES_BYTESTRING]);
 
+    UA_ByteString_clear(&certrequest);
     return retval;
 }
 
@@ -793,7 +814,6 @@ UA_Server_updateCertificate(UA_Server *server,
         }
         i++;
     }
-
     return UA_STATUSCODE_GOOD;
 }
 

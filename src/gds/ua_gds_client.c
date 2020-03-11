@@ -364,6 +364,9 @@ UA_GDS_call_createSigningRequest(UA_Client *client,
                     "Method call was unsuccessful, and %x returned values available.\n", retval);
     }
 
+    for(size_t i = 0; i < 5; i++)
+        UA_Variant_deleteMembers(&input[i]);
+
     return retval;
 }
 
@@ -400,6 +403,9 @@ UA_GDS_call_updateCertificates(UA_Client *client,
         UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
                     "UA_GDS_call_updateCertificates Method call was unsuccessful, and %x returned values available.\n", retval);
     }
+
+    for(size_t i = 0; i < 6; i++)
+        UA_Variant_deleteMembers(&input[i]);
 
     return retval;
 }
