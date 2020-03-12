@@ -623,16 +623,18 @@ updateCertificateAndPrivateKey_sp_basic256sha256(UA_SecurityPolicy *securityPoli
     securityPolicy->localCertificate.data[newCertificate.length] = '\0';
     securityPolicy->localCertificate.length--;
 
-    /* Set the new private key */
-    mbedtls_pk_free(&pc->localPrivateKey);
-    mbedtls_pk_init(&pc->localPrivateKey);
-    int mbedErr = mbedtls_pk_parse_key(&pc->localPrivateKey, newPrivateKey.data,
-                                       newPrivateKey.length, NULL, 0);
-    if(mbedErr) {
-        retval = UA_STATUSCODE_BADSECURITYCHECKSFAILED;
-        goto error;
+    if (!UA_ByteString_equal(&newPrivateKey, &UA_BYTESTRING_NULL)) {
+        /* Set the new private key */
+        mbedtls_pk_free(&pc->localPrivateKey);
+        mbedtls_pk_init(&pc->localPrivateKey);
+        int mbedErr = mbedtls_pk_parse_key(&pc->localPrivateKey,
+                                           newPrivateKey.data, newPrivateKey.length,
+                                           NULL, 0);
+        if(mbedErr) {
+            retval = UA_STATUSCODE_BADSECURITYCHECKSFAILED;
+            goto error;
+        }
     }
-
     retval = asym_makeThumbprint_sp_basic256sha256(pc->securityPolicy,
                                                    &securityPolicy->localCertificate,
                                                    &pc->localCertThumbprint);

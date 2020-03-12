@@ -41,8 +41,8 @@ int main(int argc, char* argv[]) {
 
     UA_Server *server = UA_Server_new();
     UA_ServerConfig *config = UA_Server_getConfig(server);
-    UA_ServerConfig_setMinimal(config, 4842, &certificate);
-    UA_ServerConfig_addSecurityPolicyBasic128Rsa15(config, &certificate, &privateKey);
+    UA_ServerConfig_setDefaultWithSecurityPolicies(config, 4842, &certificate, &privateKey, trustList, trustListSize, NULL, 0, NULL, 0);
+    UA_ServerConfig_addAllEndpoints(config);
 
     UA_ByteString_clear(&certificate);
     UA_ByteString_clear(&privateKey);
@@ -57,8 +57,6 @@ int main(int argc, char* argv[]) {
 
 
     UA_Server_run(server, &running);
-
     UA_Server_delete(server);
-    UA_ServerConfig_clean(config);
     return 0;
 }
