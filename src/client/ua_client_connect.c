@@ -880,16 +880,20 @@ verifyClientApplicationURI(const UA_Client *client) {
 #if UA_LOGLEVEL <= 400
     for(size_t i = 0; i < client->config.securityPoliciesSize; i++) {
         UA_SecurityPolicy *sp = &client->config.securityPolicies[i];
-        UA_StatusCode retval =
-            client->config.certificateVerification.
-            verifyApplicationURI(client->config.certificateVerification.context,
-                                 &sp->localCertificate,
-                                 &client->config.clientDescription.applicationUri);
-        if(retval != UA_STATUSCODE_GOOD) {
-            UA_LOG_WARNING(&client->config.logger, UA_LOGCATEGORY_CLIENT,
+        if (strcmp((const char*)sp->policyUri.data, "http://opcfoundation.org/UA/SecurityPolicy#None") != 0) {
+                UA_StatusCode retval =
+                    client->config.certificateVerification.
+                    verifyApplicationURI(client->config.certificateVerification.context,
+                                         &sp->localCertificate,
+                                         &client->config.clientDescription.applicationUri);
+
+
+            if(retval != UA_STATUSCODE_GOOD) {
+                UA_LOG_WARNING(&client->config.logger, UA_LOGCATEGORY_CLIENT,
                            "The configured ApplicationURI does not match the URI "
                            "specified in the certificate for the SecurityPolicy %.*s",
                            (int)sp->policyUri.length, sp->policyUri.data);
+            }
         }
     }
 #endif

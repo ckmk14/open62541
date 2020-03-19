@@ -21,15 +21,6 @@
 
 UA_Boolean running = true;
 
-/* cleanupClient deletes the memory allocated for client configuration.
- *
- * @param  client             client configuration that need to be deleted
- * @param  remoteCertificate  server certificate */
-static void cleanupClient(UA_Client* client, UA_ByteString* remoteCertificate) {
-    UA_ByteString_delete(remoteCertificate); /* Dereference the memory */
-    UA_Client_delete(client); /* Disconnects the client internally */
-}
-
 static void stopHandler(int sig) {
     UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "received ctrl-c");
     running = false;
@@ -41,16 +32,11 @@ int main(int argc, char **argv) {
 
     UA_Client*              client             = NULL;
     UA_Client*              client_push        = NULL;
-    UA_ByteString*          remoteCertificate  = NULL;
     UA_StatusCode           retval             = UA_STATUSCODE_GOOD;
     size_t                  trustListSize      = 0;
     UA_ByteString*          revocationList     = NULL;
     size_t                  revocationListSize = 0;
 
-    /* endpointArray is used to hold the available endpoints in the server
-     * endpointArraySize is used to hold the number of endpoints available */
-    UA_EndpointDescription* endpointArray      = NULL;
-    size_t                  endpointArraySize  = 0;
 
     if(argc < MIN_ARGS) {
         UA_LOG_FATAL(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
@@ -65,56 +51,7 @@ int main(int argc, char **argv) {
     UA_ByteString           certificate        = loadFile(argv[1]);
     UA_ByteString           privateKey         = loadFile(argv[2]);
 
-    /* The Get endpoint (discovery service) is done with
-     * security mode as none to see the server's capability
-     * and certificate */
-    client = UA_Client_new();
-    UA_ClientConfig_setDefault(UA_Client_getConfig(client));
 
-    client_push = UA_Client_new();
-    UA_ClientConfig_setDefault(UA_Client_getConfig(client_push));
-
-    remoteCertificate = UA_ByteString_new();
-
-    retval = UA_Client_getEndpoints(client, CONNECTION_STRING1,
-                                    &endpointArraySize, &endpointArray);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_Array_delete(endpointArray, endpointArraySize,
-                        &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION]);
-        cleanupClient(client, remoteCertificate);
-        return (int)retval;
-    }
-
-    UA_String securityPolicyUri = UA_STRING("http://opcfoundation.org/UA/SecurityPolicy#Basic128Rsa15");
-    printf("%i endpoints found\n", (int)endpointArraySize);
-    for(size_t endPointCount = 0; endPointCount < endpointArraySize; endPointCount++) {
-        printf("URL of endpoint %i is %.*s / %.*s\n", (int)endPointCount,
-               (int)endpointArray[endPointCount].endpointUrl.length,
-               endpointArray[endPointCount].endpointUrl.data,
-               (int)endpointArray[endPointCount].securityPolicyUri.length,
-               endpointArray[endPointCount].securityPolicyUri.data);
-
-        if(endpointArray[endPointCount].securityMode != UA_MESSAGESECURITYMODE_SIGNANDENCRYPT)
-            continue;
-
-        if(UA_String_equal(&endpointArray[endPointCount].securityPolicyUri, &securityPolicyUri)) {
-            UA_ByteString_copy(&endpointArray[endPointCount].serverCertificate, remoteCertificate);
-            break;
-        }
-    }
-
-    if(UA_ByteString_equal(remoteCertificate, &UA_BYTESTRING_NULL)) {
-        UA_LOG_FATAL(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-                     "Server does not support Security Basic128Rsa15 Mode of"
-                     " UA_MESSAGESECURITYMODE_SIGNANDENCRYPT");
-        cleanupClient(client, remoteCertificate);
-        return FAILURE;
-    }
-
-    UA_Array_delete(endpointArray, endpointArraySize,
-                    &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION]);
-
-    UA_Client_delete(client); /* Disconnects the client internally */
 
     /* Load the trustList. Load revocationList is not supported now */
     if(argc > MIN_ARGS)
@@ -132,15 +69,10 @@ int main(int argc, char **argv) {
     UA_ClientConfig_setDefaultEncryption(config, certificate, privateKey, trustList, trustListSize, revocationList, revocationListSize);
 
     if(client == NULL) {
-        UA_ByteString_delete(remoteCertificate); /* Dereference the memory */
         return FAILURE;
     }
 
-    for(size_t deleteCount = 0; deleteCount < trustListSize; deleteCount++) {
-        UA_ByteString_clear(&trustList[deleteCount]);
-    }
-
-    UA_String applicationUri = UA_String_fromChars("urn:open62541.example.server_register");
+    UA_String applicationUri = UA_String_fromChars("urn:open62541.server.application");
 
     /* Change the localhost to the IP running GDS if needed */
     retval = UA_Client_connect_username(client, CONNECTION_STRING1, "user1", "password");
@@ -150,75 +82,25 @@ int main(int argc, char **argv) {
         return (int)retval;
     }
 
-    retval = UA_Client_getEndpoints(client_push, CONNECTION_STRING2,
-                                    &endpointArraySize, &endpointArray);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_Array_delete(endpointArray, endpointArraySize,
-                        &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION]);
-        cleanupClient(client_push, remoteCertificate);
-        return (int)retval;
-    }
-
-    securityPolicyUri = UA_STRING("http://opcfoundation.org/UA/SecurityPolicy#Basic128Rsa15");
-    printf("%i endpoints found\n", (int)endpointArraySize);
-    for(size_t endPointCount = 0; endPointCount < endpointArraySize; endPointCount++) {
-        printf("URL of endpoint %i is %.*s / %.*s\n", (int)endPointCount,
-               (int)endpointArray[endPointCount].endpointUrl.length,
-               endpointArray[endPointCount].endpointUrl.data,
-               (int)endpointArray[endPointCount].securityPolicyUri.length,
-               endpointArray[endPointCount].securityPolicyUri.data);
-
-        if(endpointArray[endPointCount].securityMode != UA_MESSAGESECURITYMODE_SIGNANDENCRYPT)
-            continue;
-
-        if(UA_String_equal(&endpointArray[endPointCount].securityPolicyUri, &securityPolicyUri)) {
-            UA_ByteString_copy(&endpointArray[endPointCount].serverCertificate, remoteCertificate);
-            break;
-        }
-    }
-
-    if(UA_ByteString_equal(remoteCertificate, &UA_BYTESTRING_NULL)) {
-        UA_LOG_FATAL(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-                     "Server does not support Security Basic128Rsa15 Mode of"
-                     " UA_MESSAGESECURITYMODE_SIGNANDENCRYPT");
-        cleanupClient(client_push, remoteCertificate);
-        return FAILURE;
-    }
-
-    UA_Array_delete(endpointArray, endpointArraySize,
-                    &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION]);
-
-    UA_Client_delete(client_push); /* Disconnects the client internally */
-
-    /* Load the trustList. Load revocationList is not supported now */
-    if(argc > MIN_ARGS)
-        trustListSize = (size_t)argc-MIN_ARGS;
-
-    UA_STACKARRAY(UA_ByteString, trustList1, trustListSize);
-    for(size_t trustListCount = 0; trustListCount < trustListSize; trustListCount++) {
-        trustList1[trustListCount] = loadFile(argv[trustListCount+3]);
-    }
-
     /* Secure client initialization */
     client_push = UA_Client_new();
     UA_ClientConfig *config_push = UA_Client_getConfig(client_push);
-    config->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
+    config_push->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
     UA_ClientConfig_setDefaultEncryption(config_push, certificate, privateKey, trustList, trustListSize, revocationList, revocationListSize);
 
 
     if(client_push == NULL) {
-        UA_ByteString_delete(remoteCertificate); /* Dereference the memory */
         return FAILURE;
     }
 
     UA_ByteString_clear(&certificate);
     UA_ByteString_clear(&privateKey);
     for(size_t deleteCount = 0; deleteCount < trustListSize; deleteCount++) {
-        UA_ByteString_clear(&trustList1[deleteCount]);
+        UA_ByteString_clear(&trustList[deleteCount]);
     }
 
     /* A client to connect to the OPC UA server for pushing the certificate */
-    retval = UA_Client_connect(client_push, "opc.tcp://localhost:4842");
+    retval = UA_Client_connect_username(client_push, CONNECTION_STRING2, "user1", "password");
     if(retval != UA_STATUSCODE_GOOD) {
         UA_Client_delete(client_push);
         return (int)retval;
@@ -237,12 +119,12 @@ int main(int argc, char **argv) {
         memset(&record, 0, sizeof(UA_ApplicationRecordDataType));
         record.applicationUri = applicationUri;
         record.applicationType = UA_APPLICATIONTYPE_SERVER;
-        record.productUri = UA_STRING("urn:open62541.example.server_register");
+        record.productUri = UA_STRING("urn:open62541.server.application");
         record.applicationNamesSize++;
         UA_LocalizedText applicationName = UA_LOCALIZEDTEXT("en-US", "open62541_Server");
         record.applicationNames = &applicationName;
         record.discoveryUrlsSize++;
-        UA_String discoveryUrl = UA_STRING("opc.tcp://localhost:4840");
+        UA_String discoveryUrl = UA_STRING("opc.tcp://localhost:4842");
         record.discoveryUrls = &discoveryUrl;
         record.serverCapabilitiesSize++;
         UA_String serverCap = UA_STRING("LDS");
@@ -282,17 +164,20 @@ int main(int argc, char **argv) {
         }
 
         UA_ByteString_clear(&certificate_gds);
-        UA_ByteString_clear(&privateKey_gds);
+        if (&privateKey_gds != &UA_BYTESTRING_NULL) {
+            UA_ByteString_clear(&privateKey_gds);
+        }
+
         UA_ByteString_clear(&issuerCertificate);
         UA_ByteString_clear(&certificaterequest);
 
     }
 
     UA_String_deleteMembers(&applicationUri);
-    UA_Client_disconnect(client);
-    cleanupClient(client, remoteCertificate);
     UA_Client_disconnect(client_push);
     UA_Client_delete(client_push);
+    UA_Client_disconnect(client);
+    UA_Client_delete(client);
 
     return (int)retval;
 }

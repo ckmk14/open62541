@@ -36,13 +36,12 @@ int main(int argc, char* argv[]) {
         trustList[i] = loadFile(argv[i+3]);
 
     /* Loading of a revocation list currently unsupported */
-    //UA_ByteString *revocationList = NULL;
-    //size_t revocationListSize = 0;
+    UA_ByteString *revocationList = NULL;
+    size_t revocationListSize = 0;
 
     UA_Server *server = UA_Server_new();
     UA_ServerConfig *config = UA_Server_getConfig(server);
-    UA_ServerConfig_setDefaultWithSecurityPolicies(config, 4842, &certificate, &privateKey, trustList, trustListSize, NULL, 0, NULL, 0);
-    UA_ServerConfig_addAllEndpoints(config);
+    UA_ServerConfig_setDefaultWithSecurityPolicies(config, 4842, &certificate, &privateKey, trustList, trustListSize, NULL, 0, revocationList, revocationListSize);
 
     UA_ByteString_clear(&certificate);
     UA_ByteString_clear(&privateKey);

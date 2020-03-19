@@ -839,16 +839,18 @@ static UA_StatusCode
 verifyServerApplicationURI(const UA_Server *server) {
     for(size_t i = 0; i < server->config.securityPoliciesSize; i++) {
         UA_SecurityPolicy *sp = &server->config.securityPolicies[i];
-        UA_StatusCode retval = server->config.certificateVerification.
-            verifyApplicationURI(server->config.certificateVerification.context,
+        if (strcmp((const char*)sp->policyUri.data, "http://opcfoundation.org/UA/SecurityPolicy#None") != 0) {
+            UA_StatusCode retval = server->config.certificateVerification.
+                verifyApplicationURI(server->config.certificateVerification.context,
                                  &sp->localCertificate,
                                  &server->config.applicationDescription.applicationUri);
-        if(retval != UA_STATUSCODE_GOOD) {
-            UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_SERVER,
+            if(retval != UA_STATUSCODE_GOOD) {
+                UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_SERVER,
                          "The configured ApplicationURI does not match the URI "
                          "specified in the certificate for the SecurityPolicy %.*s",
                          (int)sp->policyUri.length, sp->policyUri.data);
-            return retval;
+                return retval;
+            }
         }
     }
     return UA_STATUSCODE_GOOD;
