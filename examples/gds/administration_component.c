@@ -154,8 +154,11 @@ int main(int argc, char **argv) {
         UA_ByteString issuerCertificate;
         UA_String privateKeyFormat = UA_STRING("DER");
         if (!UA_NodeId_isNull(&requestId)){
-            retval = UA_GDS_call_finishRequest(client, &appId, &requestId,
-                                               &certificate_gds, &privateKey_gds, &issuerCertificate);
+            do {
+                retval = UA_GDS_call_finishRequest(client, &appId, &requestId,
+                                                               &certificate_gds, &privateKey_gds, &issuerCertificate);
+            } while (retval == UA_STATUSCODE_BADNOTHINGTODO);
+
 
             /* Update Certificate */
             UA_Boolean applyChanges;

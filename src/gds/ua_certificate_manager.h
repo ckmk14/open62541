@@ -23,10 +23,9 @@ typedef struct gds_cm_entry {
     UA_NodeId requestId;
     UA_NodeId applicationId;
     UA_Boolean isApproved;
-    UA_ByteString certificate;
-    UA_ByteString privateKey;
-    size_t issuerCertificateSize;
-    UA_ByteString *issuerCertificates;
+    UA_GDS_CertificateGroup *certificateGroup;
+    void *requestContext;
+
 } gds_cm_entry;
 
 typedef struct gds_cm_tl_entry {

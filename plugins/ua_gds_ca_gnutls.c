@@ -38,6 +38,12 @@ typedef struct {
     gnutls_x509_crl_t  crl;
 } CaContext;
 
+typedef struct {
+    gnutls_x509_privkey_t privkey;
+    gnutls_x509_crt_t certificate;
+} RequestContext;
+
+
 /*
 void printCa_gnutls(GDS_CA *scg, const char *loc) {
     CaContext *cc = (CaContext *) scg->context;
@@ -173,15 +179,12 @@ UA_StatusCode export_cert_and_issuer(UA_GDS_CA *scg,
     return UA_STATUSCODE_GOOD;
 }
 
-
-//TODO csr_gnutls check key size within csr
-static
-UA_StatusCode csr_gnutls(UA_GDS_CA *scg,
-                                unsigned int supposedKeySize,
-                                UA_ByteString *certificateSigningRequest,
-                                UA_ByteString *certificate,
-                                size_t *issuerCertificateSize,
-                                UA_ByteString **issuerCertificates) {
+static UA_StatusCode handleFinishRequest_gnutls(  UA_GDS_CA *scg,
+                                                void* requestContext,
+                                                UA_ByteString *privateKey,
+                                                UA_ByteString *certificate,
+                                                size_t *issuerCertificateSize,
+                                                UA_ByteString **issuerCertificates) {
 
     UA_StatusCode ret = UA_STATUSCODE_GOOD;
 
@@ -189,6 +192,65 @@ UA_StatusCode csr_gnutls(UA_GDS_CA *scg,
         return UA_STATUSCODE_BADINTERNALERROR;
 
     CaContext *cc = (CaContext *) scg->context;
+
+    RequestContext *rc = (RequestContext*) requestContext;
+    if (rc == NULL) {
+        return UA_STATUSCODE_BADINTERNALERROR;
+    }
+
+    if (rc->certificate == NULL) {
+        return UA_STATUSCODE_BADNOTHINGTODO;
+    }
+
+    int gnuErr = 0;
+
+    if (rc->privkey != NULL) {
+        unsigned char buffer[10 * 1024];
+            size_t buf_size = sizeof(buffer);
+            memset(buffer, 0, buf_size);
+            gnuErr = gnutls_x509_privkey_export(rc->privkey, GNUTLS_X509_FMT_DER, buffer, &buf_size);
+            UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
+            if(ret != UA_STATUSCODE_GOOD) {
+                return ret;
+            }
+            UA_ByteString_allocBuffer(privateKey, buf_size + 1 );
+            memcpy(privateKey->data, buffer, buf_size);
+            privateKey->data[buf_size] = '\0';
+            privateKey->length--;
+
+            gnutls_x509_privkey_deinit(rc->privkey);
+    }
+
+    *issuerCertificateSize = 1;
+    export_cert_and_issuer(scg, &rc->certificate, &cc->ca_crt, certificate, issuerCertificates);
+
+    gnutls_x509_crt_deinit(rc->certificate);
+    free(requestContext);
+
+
+    return UA_STATUSCODE_GOOD;
+}
+
+
+
+//TODO csr_gnutls check key size within csr
+static
+UA_StatusCode csr_gnutls (UA_GDS_CA *scg,
+                          void **requestContext,
+                          unsigned int supposedKeySize,
+                          UA_ByteString *certificateSigningRequest) {
+
+    UA_StatusCode ret = UA_STATUSCODE_GOOD;
+
+    if(scg == NULL)
+        return UA_STATUSCODE_BADINTERNALERROR;
+
+    CaContext *cc = (CaContext *) scg->context;
+
+    RequestContext *rc = (RequestContext *) UA_calloc(sizeof(RequestContext), 1);
+    *requestContext = (void *)rc;
+
+    rc->privkey = NULL;
 
     gnutls_x509_crq_t crq;
     gnutls_x509_crt_t cert;
@@ -306,14 +368,10 @@ UA_StatusCode csr_gnutls(UA_GDS_CA *scg,
     gnuErr = gnutls_x509_crt_sign2(cert, cc->ca_crt, cc->ca_key, GNUTLS_DIG_SHA256, 0);
     UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
 
-    //Export certificate
-    *issuerCertificateSize = 1;
-    export_cert_and_issuer(scg, &cert, &cc->ca_crt,certificate, issuerCertificates);
+    rc->certificate = cert;
 
 deinit_csr:
     gnutls_x509_crq_deinit(crq);
-    gnutls_x509_crt_deinit(cert);
-
     return ret;
 }
 
@@ -342,16 +400,13 @@ gnutls_x509_subject_alt_name_t detectSubjectAltName(UA_String *name) {
 //example for pfx generation: https://www.gnutls.org/manual/gnutls.html#PKCS12-structure-generation-example
 static
 UA_StatusCode createNewKeyPair_gnutls (UA_GDS_CA *scg,
-                                   UA_String *subjectName,
-                                   UA_String *privateKeyFormat,
-                                   UA_String *privateKeyPassword,
-                                   unsigned  int keySize,
-                                   size_t domainNamesSize,
-                                   UA_String *domainNamesArray,
-                                   UA_ByteString *certificate,
-                                   UA_ByteString *privateKey,
-                                   size_t *issuerCertificateSize,
-                                   UA_ByteString **issuerCertificates) {
+                                       void **requestContext,
+                                       UA_String *subjectName,
+                                       UA_String *privateKeyFormat,
+                                       UA_String *privateKeyPassword,
+                                       unsigned int keySize,
+                                       size_t domainNamesSize,
+                                       UA_String *domainNamesArray){
 
 
 
@@ -364,6 +419,9 @@ UA_StatusCode createNewKeyPair_gnutls (UA_GDS_CA *scg,
     CaContext *cc = (CaContext *) scg->context;
     if(cc == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
+
+    RequestContext *rc = (RequestContext *) UA_calloc(sizeof(RequestContext), 1);
+    *requestContext = (void*) rc;
 
     gnutls_x509_crt_t cert;
     gnutls_x509_privkey_t privkey;
@@ -380,19 +438,7 @@ UA_StatusCode createNewKeyPair_gnutls (UA_GDS_CA *scg,
         return ret;
     }
 
-    //export privatekey
-    unsigned char buffer[10 * 1024];
-    size_t buf_size = sizeof(buffer);
-    memset(buffer, 0, buf_size);
-    gnuErr = gnutls_x509_privkey_export(privkey, GNUTLS_X509_FMT_DER, buffer, &buf_size);
-    UA_GNUTLS_ERRORHANDLING(UA_STATUSCODE_BADSECURITYCHECKSFAILED);
-    if(ret != UA_STATUSCODE_GOOD)
-        goto deinit_create;
-
-    UA_ByteString_allocBuffer(privateKey, buf_size + 1 );
-    memcpy(privateKey->data, buffer, buf_size);
-    privateKey->data[buf_size] = '\0';
-    privateKey->length--;
+    rc->privkey = privkey;
 
     //gnutls_x509_crt_set_dn requires null terminated string
     subjectName_nullTerminated.length = subjectName->length + 1;
@@ -504,16 +550,12 @@ UA_StatusCode createNewKeyPair_gnutls (UA_GDS_CA *scg,
     if(ret != UA_STATUSCODE_GOOD)
         goto deinit_create;
 
-
-    *issuerCertificateSize = 1;
-    export_cert_and_issuer(scg, &cert, &cc->ca_crt, certificate, issuerCertificates);
+    rc->certificate = cert;
 
 deinit_create:
     if (!UA_String_equal(&subjectName_nullTerminated, &UA_STRING_NULL)) {
         UA_String_deleteMembers(&subjectName_nullTerminated);
     }
-    gnutls_x509_crt_deinit(cert);
-    gnutls_x509_privkey_deinit(privkey);
     return ret;
 
 }
@@ -900,8 +942,9 @@ UA_StatusCode UA_initCA(UA_GDS_CA *scg,
     memset(scg, 0, sizeof(UA_GDS_CA));
 
     scg->logger = logger;
-    scg->certificateSigningRequest = csr_gnutls;
-    scg->createNewKeyPair = createNewKeyPair_gnutls;
+    scg->handleStartSigningRequest = csr_gnutls;
+    scg->handleNewKeyPairRequest = createNewKeyPair_gnutls;
+    scg->handleFinishRequest = handleFinishRequest_gnutls;
     scg->addCertificateToTrustList = addCertificateToTrustList_gnutls;
     scg->removeCertificateFromTrustlist = removeCertificateFromTrustlist_gnutls;
     scg->addCertificatetoCRL = addCertificatetoCRL_gnutls;

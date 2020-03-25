@@ -27,24 +27,28 @@ struct UA_GDS_CA {
     void *context;
     UA_Logger *logger;
 
-    UA_StatusCode (*createNewKeyPair) (UA_GDS_CA *scg,
-                                       UA_String *subjectName,
-                                       UA_String *privateKeyFormat,
-                                       UA_String *privateKeyPassword,
-                                       unsigned  int keySize,
-                                       size_t domainNamesSize,
-                                       UA_String *domainNamesArray,
-                                       UA_ByteString *certificate,
-                                       UA_ByteString *privateKey,
-                                       size_t *issuerCertificateSize,
-                                       UA_ByteString **issuerCertificates);
+    UA_StatusCode (*handleNewKeyPairRequest) (UA_GDS_CA *scg,
+                                              void **requestContext,
+                                              UA_String *subjectName,
+                                              UA_String *privateKeyFormat,
+                                              UA_String *privateKeyPassword,
+                                              unsigned  int keySize,
+                                              size_t domainNamesSize,
+                                              UA_String *domainNamesArray);
 
-    UA_StatusCode (*certificateSigningRequest) (UA_GDS_CA *scg,
+    UA_StatusCode (*handleStartSigningRequest) (UA_GDS_CA *scg,
+                                                void **requestContext,
                                                 unsigned int supposedKeySize,
-                                                UA_ByteString *certificateSigningRequest,
-                                                UA_ByteString *certificate,
-                                                size_t *issuerCertificateSize,
-                                                UA_ByteString **issuerCertificates);
+                                                UA_ByteString *certificateSigningRequest);
+
+
+    UA_StatusCode (*handleFinishRequest) (UA_GDS_CA *scg,
+                                              void *requestContext,
+                                              UA_ByteString *privateKey,
+                                              UA_ByteString *certificate,
+                                              size_t *issuerCertificateSize,
+                                              UA_ByteString **issuerCertificates);
+
 
     UA_StatusCode (*addCertificateToTrustList)(UA_GDS_CA *scg,
                                                UA_ByteString *certificate,
