@@ -355,10 +355,12 @@ UA_GDS_call_createSigningRequest(UA_Client *client,
     UA_Variant *output;
     UA_StatusCode retval = UA_Client_call(client, UA_NODEID_NUMERIC(0, 12637),
                                           UA_NODEID_NUMERIC(0, 12737), 5, input, &outputSize, &output);
-    if(retval == UA_STATUSCODE_GOOD) {
+    if(retval == UA_STATUSCODE_GOOD && output[0].data != NULL) {
         UA_ByteString *certReq = (UA_ByteString *) output[0].data;
         UA_ByteString_allocBuffer(certificateRequest, certReq->length);
         memcpy(certificateRequest->data, certReq->data, certReq->length);
+        UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+
     } else {
         UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
                     "Method call was unsuccessful, and %x returned values available.\n", retval);
@@ -399,6 +401,7 @@ UA_GDS_call_updateCertificates(UA_Client *client,
         UA_Boolean *applyChanges = (UA_Boolean *) output[0].data;
         UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
                     "Certificates are updated to the standalone opc server successfully and apply changes value %d.\n", *applyChanges);
+        UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
     } else {
         UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
                     "UA_GDS_call_updateCertificates Method call was unsuccessful, and %x returned values available.\n", retval);
@@ -425,24 +428,5 @@ UA_GDS_call_closeTrustList(UA_Client *client,
     }
     UA_Variant_deleteMembers(&input);
     return retval;
-}
-
-
-static
-UA_DataTypeArray *UA_GDS_Client_DataTypeArray;
-
-UA_StatusCode
-UA_GDS_Client_deinit(UA_Client *client) {
-    client->config.customDataTypes = UA_GDS_Client_DataTypeArray->next;
-    UA_free(UA_GDS_Client_DataTypeArray);
-    return UA_STATUSCODE_GOOD;
-}
-UA_StatusCode
-UA_GDS_Client_init(UA_Client *client) {
-    UA_DataTypeArray init = { client->config.customDataTypes, 1, &ApplicationRecordDataType};
-    UA_GDS_Client_DataTypeArray = (UA_DataTypeArray*) UA_malloc(sizeof(UA_DataTypeArray));
-    memcpy(UA_GDS_Client_DataTypeArray, &init, sizeof(init));
-    client->config.customDataTypes = UA_GDS_Client_DataTypeArray;
-    return UA_STATUSCODE_GOOD;
 }
 #endif

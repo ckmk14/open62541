@@ -43,10 +43,6 @@ UA_Client_init(UA_Client* client) {
 
     UA_Timer_init(&client->timer);
     UA_WorkQueue_init(&client->workQueue);
-
-#ifdef UA_ENABLE_GDS_CLIENT
-    UA_GDS_Client_init(client);
-#endif
 }
 
 UA_Client UA_EXPORT *
