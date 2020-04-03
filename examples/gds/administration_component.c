@@ -30,8 +30,8 @@ int main(int argc, char **argv) {
     signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
 
-    UA_Client*              client             = NULL;
-    UA_Client*              client_push        = NULL;
+    UA_Client*              gds_client         = NULL;
+    UA_Client*              push_client        = NULL;
     UA_StatusCode           retval             = UA_STATUSCODE_GOOD;
     size_t                  trustListSize      = 0;
     UA_ByteString*          revocationList     = NULL;
@@ -62,55 +62,53 @@ int main(int argc, char **argv) {
         trustList[trustListCount] = loadFile(argv[trustListCount+3]);
     }
 
-    /* Secure client initialization */
-    client= UA_Client_new();
-    UA_ClientConfig *config = UA_Client_getConfig(client);
-    config->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
-    UA_ClientConfig_setDefaultEncryption(config, certificate, privateKey, trustList, trustListSize, revocationList, revocationListSize);
+    /* Secure client initialization for the communication with the GDS*/
+    gds_client = UA_Client_new();
+    UA_ClientConfig *gds_cc = UA_Client_getConfig(gds_client);
+    UA_ClientConfig_setDefaultEncryption(gds_cc, certificate, privateKey, trustList, trustListSize, revocationList, revocationListSize);
+    gds_cc->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
 
-    if(client == NULL) {
-        return FAILURE;
-    }
+    /* Secure client initialization - communication with server supporting push management*/
+    push_client = UA_Client_new();
+    UA_ClientConfig *push_cc = UA_Client_getConfig(push_client);
+    UA_ClientConfig_setDefaultEncryption(push_cc, certificate, privateKey, trustList, trustListSize, revocationList, revocationListSize);
+    push_cc->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
 
-    UA_String applicationUri = UA_String_fromChars("urn:open62541.server.application");
-
-    /* Change the localhost to the IP running GDS if needed */
-    retval = UA_Client_connect_username(client, CONNECTION_STRING1, "user1", "password");
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_Client_delete(client);
-        UA_String_deleteMembers(&applicationUri);
-        return (int)retval;
-    }
-
-    /* Secure client initialization */
-    client_push = UA_Client_new();
-    UA_ClientConfig *config_push = UA_Client_getConfig(client_push);
-    config_push->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
-    UA_ClientConfig_setDefaultEncryption(config_push, certificate, privateKey, trustList, trustListSize, revocationList, revocationListSize);
-
-
-    if(client_push == NULL) {
-        return FAILURE;
-    }
+    UA_DataTypeArray tmp = { gds_cc->customDataTypes, 1, &ApplicationRecordDataType};
+    gds_cc->customDataTypes = &tmp;
 
     UA_ByteString_clear(&certificate);
     UA_ByteString_clear(&privateKey);
-    for(size_t deleteCount = 0; deleteCount < trustListSize; deleteCount++) {
+
+    for(size_t deleteCount = 0; deleteCount < trustListSize; deleteCount++)
         UA_ByteString_clear(&trustList[deleteCount]);
+
+    if(gds_client == NULL || push_client == NULL) {
+        return FAILURE;
+    }
+
+    /* Change the localhost to the IP running GDS if needed */
+    retval = UA_Client_connect_username(gds_client, CONNECTION_STRING1, "user1", "password");
+    if(retval != UA_STATUSCODE_GOOD) {
+        UA_Client_delete(gds_client);
+        UA_Client_delete(push_client);
+        return (int)retval;
     }
 
     /* A client to connect to the OPC UA server for pushing the certificate */
-    retval = UA_Client_connect_username(client_push, CONNECTION_STRING2, "user1", "password");
+    retval = UA_Client_connect_username(push_client, CONNECTION_STRING2, "user1", "password");
     if(retval != UA_STATUSCODE_GOOD) {
-        UA_Client_delete(client_push);
+        UA_Client_delete(gds_client);
+        UA_Client_delete(push_client);
         return (int)retval;
     }
 
     /* Every ApplicationURI shall be unique.
      * Therefore the client should be sure that the application is not registered yet. */
+    UA_String applicationUri = UA_String_fromChars("urn:open62541.server.application");
     size_t length = 0;
     UA_ApplicationRecordDataType *records = NULL;
-    UA_GDS_call_findApplication(client, applicationUri, &length, records);
+    UA_GDS_call_findApplication(gds_client, applicationUri, &length, records);
 
     if (!length) {
         // Register Application
@@ -130,7 +128,7 @@ int main(int argc, char **argv) {
         UA_String serverCap = UA_STRING("LDS");
         record.serverCapabilities = &serverCap;
 
-        UA_GDS_call_registerApplication(client, &record, &appId);
+        UA_GDS_call_registerApplication(gds_client, &record, &appId);
 
         //Request a new application instance certificate (with the associated private key)
         UA_NodeId requestId;
@@ -140,29 +138,30 @@ int main(int argc, char **argv) {
         /* Does not support for new private key generation. So the value should be 0
          * To Do: Generation of private key and storing the same.
          */
-        UA_Boolean regenPrivKey = 0;
+        UA_Boolean regenPrivKey = false;
 
-        UA_GDS_call_createSigningRequest(client_push, &UA_NODEID_NULL, &UA_NODEID_NULL, &subjectName,
+        UA_GDS_call_createSigningRequest(push_client, &UA_NODEID_NULL, &UA_NODEID_NULL, &subjectName,
                                          &regenPrivKey, &UA_BYTESTRING_NULL, &certificaterequest);
 
-        UA_GDS_call_startSigningRequest(client, &appId, &UA_NODEID_NULL, &UA_NODEID_NULL,
+
+        UA_GDS_call_startSigningRequest(gds_client, &appId, &UA_NODEID_NULL, &UA_NODEID_NULL,
                                         &certificaterequest, &requestId);
 
         //Fetch the certificate and private key
-        UA_ByteString certificate_gds;
-        UA_ByteString privateKey_gds;
-        UA_ByteString issuerCertificate;
+        UA_ByteString certificate_gds = UA_BYTESTRING_NULL;
+        UA_ByteString privateKey_gds = UA_BYTESTRING_NULL;
+        UA_ByteString issuerCertificate = UA_BYTESTRING_NULL;
         UA_String privateKeyFormat = UA_STRING("DER");
         if (!UA_NodeId_isNull(&requestId)){
             do {
-                retval = UA_GDS_call_finishRequest(client, &appId, &requestId,
+                retval = UA_GDS_call_finishRequest(gds_client, &appId, &requestId,
                                                                &certificate_gds, &privateKey_gds, &issuerCertificate);
             } while (retval == UA_STATUSCODE_BADNOTHINGTODO);
 
 
             /* Update Certificate */
             UA_Boolean applyChanges;
-            UA_GDS_call_updateCertificates(client_push, &UA_NODEID_NULL, &UA_NODEID_NULL,
+            UA_GDS_call_updateCertificates(push_client, &UA_NODEID_NULL, &UA_NODEID_NULL,
                                            &certificate_gds, &issuerCertificate, &privateKeyFormat, &privateKey_gds, &applyChanges);
         }
 
@@ -177,10 +176,10 @@ int main(int argc, char **argv) {
     }
 
     UA_String_deleteMembers(&applicationUri);
-    UA_Client_disconnect(client_push);
-    UA_Client_delete(client_push);
-    UA_Client_disconnect(client);
-    UA_Client_delete(client);
+    UA_Client_disconnect(push_client);
+    UA_Client_delete(push_client);
+    UA_Client_disconnect(gds_client);
+    UA_Client_delete(gds_client);
 
     return (int)retval;
 }
