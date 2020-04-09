@@ -426,7 +426,7 @@ UA_StatusCode copy_private_key_gnu_struc(gnutls_datum_t *data_privkey,
 UA_StatusCode create_csr(UA_Server *server, UA_String *subjectName,
                          UA_ByteString *certificateRequest);
 
-UA_StatusCode server_update_certificate(UA_Server *server, UA_ByteString *certificate,
+UA_StatusCode server_update_certificate(UA_Server *server, const UA_NodeId *certificateGroupId, const UA_NodeId *certificateTypeId, UA_ByteString *certificate,
                                         UA_Boolean *applyChangesRequired);
 UA_StatusCode
 UA_GDS_CreateSigningRequest(UA_Server *server,

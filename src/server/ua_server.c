@@ -377,7 +377,9 @@ UA_StatusCode create_csr(UA_Server *server, UA_String *subjectName,
 
 }
 
-UA_StatusCode server_update_certificate(UA_Server *server, UA_ByteString *newcertificate,
+UA_StatusCode server_update_certificate(UA_Server *server, const UA_NodeId *certificateGroupId,
+                                        const UA_NodeId *certificateTypeId,
+                                        UA_ByteString *newcertificate,
                                         UA_Boolean *applyChangesRequired) {
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
@@ -385,33 +387,44 @@ UA_StatusCode server_update_certificate(UA_Server *server, UA_ByteString *newcer
     UA_ByteString oldcertificate;
 
     while (i < server->config.endpointsSize) {
-        UA_ByteString *serverCert = &server->config.endpoints[i].serverCertificate;
-        if (!UA_ByteString_equal(serverCert, &UA_BYTESTRING_NULL)) {
-            /* Allocate the output buffer */
-            retval = UA_ByteString_allocBuffer(&oldcertificate, serverCert->length);
-            if(retval != UA_STATUSCODE_GOOD)
-                return retval;
-            memcpy(oldcertificate.data, serverCert->data, serverCert->length);
-            break;
+        if (UA_NodeId_equal(&server->config.endpoints[i].certificateGroupId, certificateGroupId) && UA_NodeId_equal(&server->config.endpoints[i].certificateTypeId, certificateTypeId)) {
+            UA_ByteString *serverCert = &server->config.endpoints[i].serverCertificate;
+            if (!UA_ByteString_equal(serverCert, &UA_BYTESTRING_NULL)) {
+                /* Allocate the output buffer */
+                retval = UA_ByteString_allocBuffer(&oldcertificate, serverCert->length);
+                if(retval != UA_STATUSCODE_GOOD)
+                    return retval;
+                memcpy(oldcertificate.data, serverCert->data, serverCert->length);
+                break;
+            }
         }
         i++;
+
     }
 
     /* To do: Private key pass while regen priv key is 1 */
-    retval = UA_Server_updateCertificate(server, &oldcertificate, newcertificate, &UA_BYTESTRING_NULL, 0, 0);
+    retval = UA_Server_updateCertificate(server, certificateGroupId, certificateTypeId, &oldcertificate, newcertificate, &UA_BYTESTRING_NULL, 0, 0);
     UA_ByteString_clear(&oldcertificate);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
     (server->config.regeneratePrivateKey) = 0;
     /* To do: The check has to be fixed */
-    if (UA_ByteString_equal(newcertificate, &server->config.endpoints[0].serverCertificate)) {
-        *applyChangesRequired = 0;
-        return retval;
+    size_t j = 0;
+    while(j < server->config.endpointsSize) {
+        if (UA_NodeId_equal(&server->config.endpoints[j].certificateGroupId, certificateGroupId) &&
+                UA_NodeId_equal(&server->config.endpoints[j].certificateTypeId, certificateTypeId)) {
+                if (UA_ByteString_equal(newcertificate, &server->config.endpoints[j].serverCertificate)) {
+                    *applyChangesRequired = 0;
+                }
+                else {
+                    *applyChangesRequired = 1;
+                    return retval;
+                }
+        }
+        j++;
     }
-    else {
-        *applyChangesRequired = 1;
-    }
+
     return retval;
 }
 
@@ -500,7 +513,7 @@ UA_GDS_UpdateCertificate(UA_Server *server,
     }
 
     /* Update the certificate after verifying that the certificate is not updated */
-    retval = server_update_certificate(server, certificate, applyChangesRequired);
+    retval = server_update_certificate(server, certificateGroupId, certificateTypeId, certificate, applyChangesRequired);
     return retval;
 }
 
@@ -760,6 +773,8 @@ UA_Server_removeCallback(UA_Server *server, UA_UInt64 callbackId) {
 
 UA_StatusCode
 UA_Server_updateCertificate(UA_Server *server,
+                            const UA_NodeId *certificateGroupId,
+                            const UA_NodeId *certificateTypeId,
                             const UA_ByteString *oldCertificate,
                             const UA_ByteString *newCertificate,
                             const UA_ByteString *newPrivateKey,
@@ -804,7 +819,7 @@ UA_Server_updateCertificate(UA_Server *server,
     size_t i = 0;
     while(i < server->config.endpointsSize) {
         UA_EndpointDescription *ed = &server->config.endpoints[i];
-        if(UA_ByteString_equal(&ed->serverCertificate, oldCertificate)) {
+        if(UA_NodeId_equal(certificateGroupId, &ed->certificateGroupId) && UA_NodeId_equal(&ed->certificateTypeId, certificateTypeId)) {
             UA_String_deleteMembers(&ed->serverCertificate);
             UA_String_copy(newCertificate, &ed->serverCertificate);
             UA_SecurityPolicy *sp = UA_SecurityPolicy_getSecurityPolicyByUri(server, &server->config.endpoints[i].securityPolicyUri);

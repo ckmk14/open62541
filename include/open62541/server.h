@@ -1449,6 +1449,8 @@ UA_Server_setConditionTwoStateVariableCallback(UA_Server *server, const UA_NodeI
 
 UA_StatusCode UA_EXPORT
 UA_Server_updateCertificate(UA_Server *server,
+                            const UA_NodeId *certificateGroupId,
+                            const UA_NodeId *certificateTypeId,
                             const UA_ByteString *oldCertificate,
                             const UA_ByteString *newCertificate,
                             const UA_ByteString *newPrivateKey,

@@ -130,6 +130,13 @@ int main(int argc, char **argv) {
 
         UA_GDS_call_registerApplication(gds_client, &record, &appId);
 
+        size_t certificateGroupSize = 0;
+        UA_NodeId *certificateGroupId;
+        UA_GDS_call_getCertificateGroups(gds_client, &appId, &certificateGroupSize, &certificateGroupId);
+
+        UA_NodeId *certificateTypeId = (UA_NodeId*) UA_malloc(sizeof(UA_NodeId));
+        *certificateTypeId = UA_NODEID_NUMERIC(2, 617);
+
         //Request a new application instance certificate (with the associated private key)
         UA_NodeId requestId;
         UA_ByteString certificaterequest;
@@ -140,11 +147,11 @@ int main(int argc, char **argv) {
          */
         UA_Boolean regenPrivKey = false;
 
-        UA_GDS_call_createSigningRequest(push_client, &UA_NODEID_NULL, &UA_NODEID_NULL, &subjectName,
+        UA_GDS_call_createSigningRequest(push_client, certificateGroupId, certificateTypeId, &subjectName,
                                          &regenPrivKey, &UA_BYTESTRING_NULL, &certificaterequest);
 
 
-        UA_GDS_call_startSigningRequest(gds_client, &appId, &UA_NODEID_NULL, &UA_NODEID_NULL,
+        UA_GDS_call_startSigningRequest(gds_client, &appId, certificateGroupId, certificateTypeId,
                                         &certificaterequest, &requestId);
 
         //Fetch the certificate and private key
@@ -161,7 +168,7 @@ int main(int argc, char **argv) {
 
             /* Update Certificate */
             UA_Boolean applyChanges;
-            UA_GDS_call_updateCertificates(push_client, &UA_NODEID_NULL, &UA_NODEID_NULL,
+            UA_GDS_call_updateCertificates(push_client, certificateGroupId, certificateTypeId,
                                            &certificate_gds, &issuerCertificate, &privateKeyFormat, &privateKey_gds, &applyChanges);
         }
 
@@ -172,6 +179,8 @@ int main(int argc, char **argv) {
 
         UA_ByteString_clear(&issuerCertificate);
         UA_ByteString_clear(&certificaterequest);
+        UA_free(certificateTypeId);
+        UA_free(certificateGroupId);
 
     }
 
