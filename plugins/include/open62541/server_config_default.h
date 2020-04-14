@@ -221,6 +221,14 @@ UA_ServerConfig_addEndpoint(UA_ServerConfig *config, const UA_String securityPol
 UA_EXPORT UA_StatusCode
 UA_ServerConfig_addAllEndpoints(UA_ServerConfig *config);
 
+#ifdef UA_ENABLE_GDS_CM
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addEndpointCertificateMapping(UA_ServerConfig *config,
+                                        UA_ByteString *serverCertificate,
+                                        UA_NodeId certificateGroupId,
+                                        UA_NodeId certificateTypeId);
+#endif
+
 _UA_END_DECLS
 
 #endif /* UA_SERVER_CONFIG_DEFAULT_H_ */

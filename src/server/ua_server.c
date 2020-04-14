@@ -245,6 +245,8 @@ void UA_Server_delete(UA_Server *server) {
 }
 
 #ifdef UA_ENABLE_SERVER_PUSH
+
+
 UA_StatusCode copy_private_key_gnu_struc(gnutls_datum_t *data_privkey, UA_ByteString *privkey_copy) {
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     data_privkey->data = (unsigned char *)UA_malloc(privkey_copy->length + 1);
@@ -386,45 +388,39 @@ UA_StatusCode server_update_certificate(UA_Server *server, const UA_NodeId *cert
     size_t i = 0;
     UA_ByteString oldcertificate;
 
-    while (i < server->config.endpointsSize) {
-        if (UA_NodeId_equal(&server->config.endpoints[i].certificateGroupId, certificateGroupId) && UA_NodeId_equal(&server->config.endpoints[i].certificateTypeId, certificateTypeId)) {
-            UA_ByteString *serverCert = &server->config.endpoints[i].serverCertificate;
-            if (!UA_ByteString_equal(serverCert, &UA_BYTESTRING_NULL)) {
-                /* Allocate the output buffer */
-                retval = UA_ByteString_allocBuffer(&oldcertificate, serverCert->length);
+    while (i < server->config.endpointCertificateMappingSize) {
+        if (UA_NodeId_equal(&server->config.endpointCertificateMapping[i].certificateGroupId, certificateGroupId)
+                && UA_NodeId_equal(&server->config.endpointCertificateMapping[i].certificateTypeId, certificateTypeId)) {
+            if (!UA_ByteString_equal(&server->config.endpointCertificateMapping->serverCertificate, &UA_BYTESTRING_NULL)) {
+                /*Allocate the output buffer*/
+                retval = UA_ByteString_allocBuffer(&oldcertificate, server->config.endpointCertificateMapping->serverCertificate.length);
                 if(retval != UA_STATUSCODE_GOOD)
                     return retval;
-                memcpy(oldcertificate.data, serverCert->data, serverCert->length);
+                memcpy(oldcertificate.data, server->config.endpointCertificateMapping->serverCertificate.data, server->config.endpointCertificateMapping->serverCertificate.length);
                 break;
             }
         }
         i++;
 
     }
-
     /* To do: Private key pass while regen priv key is 1 */
     retval = UA_Server_updateCertificate(server, certificateGroupId, certificateTypeId, &oldcertificate, newcertificate, &UA_BYTESTRING_NULL, 0, 0);
-    UA_ByteString_clear(&oldcertificate);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
     (server->config.regeneratePrivateKey) = 0;
     /* To do: The check has to be fixed */
     size_t j = 0;
+    *applyChangesRequired = 0;
     while(j < server->config.endpointsSize) {
-        if (UA_NodeId_equal(&server->config.endpoints[j].certificateGroupId, certificateGroupId) &&
-                UA_NodeId_equal(&server->config.endpoints[j].certificateTypeId, certificateTypeId)) {
-                if (UA_ByteString_equal(newcertificate, &server->config.endpoints[j].serverCertificate)) {
-                    *applyChangesRequired = 0;
-                }
-                else {
-                    *applyChangesRequired = 1;
-                    return retval;
-                }
+        if(UA_ByteString_equal(&server->config.endpoints[j].serverCertificate, &oldcertificate)) {
+           *applyChangesRequired = 1;
+           return retval;
         }
         j++;
     }
 
+    UA_ByteString_clear(&oldcertificate);
     return retval;
 }
 
@@ -817,15 +813,23 @@ UA_Server_updateCertificate(UA_Server *server,
     }
 
     size_t i = 0;
-    while(i < server->config.endpointsSize) {
-        UA_EndpointDescription *ed = &server->config.endpoints[i];
-        if(UA_NodeId_equal(certificateGroupId, &ed->certificateGroupId) && UA_NodeId_equal(&ed->certificateTypeId, certificateTypeId)) {
-            UA_String_deleteMembers(&ed->serverCertificate);
-            UA_String_copy(newCertificate, &ed->serverCertificate);
-            UA_SecurityPolicy *sp = UA_SecurityPolicy_getSecurityPolicyByUri(server, &server->config.endpoints[i].securityPolicyUri);
-            if(!sp)
-                return UA_STATUSCODE_BADINTERNALERROR;
-            sp->updateCertificateAndPrivateKey(sp, *newCertificate, *newPrivateKey);
+    while(i < server->config.endpointCertificateMappingSize) {
+        if(UA_NodeId_equal(certificateGroupId, &server->config.endpointCertificateMapping[i].certificateGroupId) &&
+                UA_NodeId_equal(&server->config.endpointCertificateMapping[i].certificateTypeId, certificateTypeId)) {
+            size_t j = 0;
+            while (j < server->config.endpointsSize) {
+                if (UA_ByteString_equal(&server->config.endpointCertificateMapping[i].serverCertificate, &server->config.endpoints[j].serverCertificate)) {
+                    UA_String_deleteMembers(&server->config.endpoints[j].serverCertificate);
+                    UA_String_copy(newCertificate, &server->config.endpoints[j].serverCertificate);
+                    UA_SecurityPolicy *sp = UA_SecurityPolicy_getSecurityPolicyByUri(server, &server->config.endpoints[j].securityPolicyUri);
+                    if(!sp)
+                        return UA_STATUSCODE_BADINTERNALERROR;
+                    sp->updateCertificateAndPrivateKey(sp, *newCertificate, *newPrivateKey);
+                }
+                j++;
+            }
+            UA_String_copy(newCertificate, &server->config.endpointCertificateMapping[i].serverCertificate);
+            break;
         }
         i++;
     }

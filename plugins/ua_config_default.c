@@ -410,6 +410,39 @@ UA_ServerConfig_addEndpoint(UA_ServerConfig *config, const UA_String securityPol
     return UA_STATUSCODE_GOOD;
 }
 
+#ifdef UA_ENABLE_GDS_CM
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addEndpointCertificateMapping(UA_ServerConfig *config,
+                                        UA_ByteString *serverCertificate,
+                                        UA_NodeId certificateGroupId,
+                                        UA_NodeId certificateTypeId) {
+    size_t i = 0;
+    while (i < config->endpointCertificateMappingSize) {
+        if (UA_ByteString_equal(&config->endpointCertificateMapping[i].serverCertificate, serverCertificate)) {
+            return UA_STATUSCODE_GOOD;
+        }
+        i++;
+    }
+    UA_EndpointCertificateMapping * tmp = (UA_EndpointCertificateMapping *)
+            UA_realloc(config->endpointCertificateMapping,
+                       sizeof(UA_EndpointCertificateMapping) * (1 + config->endpointCertificateMappingSize));
+        if(!tmp) {
+            return UA_STATUSCODE_BADOUTOFMEMORY;
+        }
+        config->endpointCertificateMapping = tmp;
+
+        memset(&config->endpointCertificateMapping[config->endpointCertificateMappingSize], 0, sizeof(UA_EndpointCertificateMapping));
+        UA_ByteString_init(&config->endpointCertificateMapping[config->endpointCertificateMappingSize].serverCertificate);
+        UA_ByteString_copy(serverCertificate, &config->endpointCertificateMapping[config->endpointCertificateMappingSize].serverCertificate);
+        config->endpointCertificateMapping[config->endpointCertificateMappingSize].certificateGroupId = certificateGroupId;
+        config->endpointCertificateMapping[config->endpointCertificateMappingSize].certificateTypeId = certificateTypeId;
+        config->endpointCertificateMappingSize++;
+
+        return UA_STATUSCODE_GOOD;
+
+}
+#endif
+
 UA_EXPORT UA_StatusCode
 UA_ServerConfig_addAllEndpoints(UA_ServerConfig *config) {
     /* Allocate the endpoints */

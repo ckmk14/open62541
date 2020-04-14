@@ -33,20 +33,17 @@ int main(int argc, char* argv[]) {
     UA_Server *server = UA_Server_new();
     UA_ServerConfig *config = UA_Server_getConfig(server);
     UA_ServerConfig_setMinimal(config, 4842, &certificate1);
-    config->endpoints[0].certificateGroupId = UA_NODEID_NUMERIC(2, 615);
-    config->endpoints[0].certificateTypeId = UA_NODEID_NUMERIC(3, 616);
+    UA_ServerConfig_addEndpointCertificateMapping(config, &config->endpoints[0].serverCertificate, UA_NODEID_NUMERIC(2, 615), UA_NODEID_NUMERIC(2, 617));
 
     UA_ServerConfig_addSecurityPolicyBasic256(config, &certificate1, &privateKey1);
     UA_ByteString basic256Uri = UA_BYTESTRING("http://opcfoundation.org/UA/SecurityPolicy#Basic256");
     UA_ServerConfig_addEndpoint(config, basic256Uri, UA_MESSAGESECURITYMODE_SIGNANDENCRYPT);
-    config->endpoints[1].certificateGroupId = UA_NODEID_NUMERIC(2, 615);
-    config->endpoints[1].certificateTypeId = UA_NODEID_NUMERIC(2, 617);
+    UA_ServerConfig_addEndpointCertificateMapping(config, &config->endpoints[1].serverCertificate, UA_NODEID_NUMERIC(2, 615), UA_NODEID_NUMERIC(2, 617));
 
     UA_ServerConfig_addSecurityPolicyBasic256Sha256(config, &certificate2, &privateKey2);
     UA_ByteString basic256Sha256Uri = UA_BYTESTRING("http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256");
     UA_ServerConfig_addEndpoint(config, basic256Sha256Uri, UA_MESSAGESECURITYMODE_SIGNANDENCRYPT);
-    config->endpoints[2].certificateGroupId = UA_NODEID_NUMERIC(1, 615);
-    config->endpoints[2].certificateTypeId = UA_NODEID_NUMERIC(1, 616);
+    UA_ServerConfig_addEndpointCertificateMapping(config, &config->endpoints[2].serverCertificate, UA_NODEID_NUMERIC(1, 615), UA_NODEID_NUMERIC(1, 616));
 
     UA_ByteString_clear(&certificate1);
     UA_ByteString_clear(&privateKey1);

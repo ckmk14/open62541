@@ -65,6 +65,14 @@ typedef struct {
     UA_Duration max;
 } UA_DurationRange;
 
+#ifdef UA_ENABLE_GDS_CM
+typedef struct {
+    UA_ByteString serverCertificate;
+    UA_NodeId certificateGroupId;
+    UA_NodeId certificateTypeId;
+} UA_EndpointCertificateMapping;
+#endif
+
 #ifdef UA_ENABLE_DISCOVERY
 typedef struct {
 
@@ -138,6 +146,8 @@ struct UA_ServerConfig {
 #ifdef UA_ENABLE_GDS_CM
     size_t gds_certificateGroupSize;
     UA_GDS_CertificateGroup *gds_certificateGroups;
+    UA_EndpointCertificateMapping *endpointCertificateMapping;
+    size_t endpointCertificateMappingSize;
 #endif
 
 #if defined(UA_ENABLE_GDS_CM) && defined(UA_ENABLE_SERVER_PUSH)

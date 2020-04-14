@@ -83,13 +83,19 @@ UA_ServerConfig_clean(UA_ServerConfig *config) {
         UA_free(ca);
     }
     UA_free(config->gds_certificateGroups);
+
+    for(size_t i = 0; i < config->endpointCertificateMappingSize; ++i) {
+        UA_ByteString_clear(&config->endpointCertificateMapping[i].serverCertificate);
+    }
+    UA_free(config->endpointCertificateMapping);
+    config->endpointCertificateMapping = NULL;
+    config->endpointCertificateMappingSize = 0;
 #endif
 
     /* Logger */
     if(config->logger.clear)
         config->logger.clear(config->logger.context);
 }
-
 void
 UA_ServerConfig_setCustomHostname(UA_ServerConfig *config,
                                   const UA_String customHostname) {
