@@ -819,8 +819,8 @@ UA_Server_updateCertificate(UA_Server *server,
             size_t j = 0;
             while (j < server->config.endpointsSize) {
                 if (UA_ByteString_equal(&server->config.endpointCertificateMapping[i].serverCertificate, &server->config.endpoints[j].serverCertificate)) {
-                    UA_String_deleteMembers(&server->config.endpoints[j].serverCertificate);
-                    UA_String_copy(newCertificate, &server->config.endpoints[j].serverCertificate);
+                    UA_ByteString_clear(&server->config.endpoints[j].serverCertificate);
+                    UA_ByteString_copy(newCertificate, &server->config.endpoints[j].serverCertificate);
                     UA_SecurityPolicy *sp = UA_SecurityPolicy_getSecurityPolicyByUri(server, &server->config.endpoints[j].securityPolicyUri);
                     if(!sp)
                         return UA_STATUSCODE_BADINTERNALERROR;
@@ -828,7 +828,8 @@ UA_Server_updateCertificate(UA_Server *server,
                 }
                 j++;
             }
-            UA_String_copy(newCertificate, &server->config.endpointCertificateMapping[i].serverCertificate);
+            UA_ByteString_clear( &server->config.endpointCertificateMapping[i].serverCertificate);
+            UA_ByteString_copy(newCertificate, &server->config.endpointCertificateMapping[i].serverCertificate);
             break;
         }
         i++;

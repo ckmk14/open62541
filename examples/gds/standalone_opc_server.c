@@ -42,6 +42,7 @@ int main(int argc, char* argv[]) {
     UA_Server *server = UA_Server_new();
     UA_ServerConfig *config = UA_Server_getConfig(server);
     UA_ServerConfig_setDefaultWithSecurityPolicies(config, 4842, &certificate, &privateKey, trustList, trustListSize, NULL, 0, revocationList, revocationListSize);
+    UA_ServerConfig_addEndpointCertificateMapping(config, &certificate, UA_NODEID_NUMERIC(2, 615), UA_NODEID_NUMERIC(2, 617));
 
     UA_ByteString_clear(&certificate);
     UA_ByteString_clear(&privateKey);

@@ -56,7 +56,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-
     UA_Server_run(server, &running);
     UA_Server_delete(server);
     return 0;

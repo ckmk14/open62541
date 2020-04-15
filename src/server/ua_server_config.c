@@ -84,7 +84,7 @@ UA_ServerConfig_clean(UA_ServerConfig *config) {
     }
     UA_free(config->gds_certificateGroups);
 
-    for(size_t i = 0; i < config->endpointCertificateMappingSize; ++i) {
+    for(size_t i = 0; i < config->endpointCertificateMappingSize; i++) {
         UA_ByteString_clear(&config->endpointCertificateMapping[i].serverCertificate);
     }
     UA_free(config->endpointCertificateMapping);

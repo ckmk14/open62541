@@ -434,6 +434,7 @@ UA_ServerConfig_addEndpointCertificateMapping(UA_ServerConfig *config,
         memset(&config->endpointCertificateMapping[config->endpointCertificateMappingSize], 0, sizeof(UA_EndpointCertificateMapping));
         UA_ByteString_init(&config->endpointCertificateMapping[config->endpointCertificateMappingSize].serverCertificate);
         UA_ByteString_copy(serverCertificate, &config->endpointCertificateMapping[config->endpointCertificateMappingSize].serverCertificate);
+
         config->endpointCertificateMapping[config->endpointCertificateMappingSize].certificateGroupId = certificateGroupId;
         config->endpointCertificateMapping[config->endpointCertificateMappingSize].certificateTypeId = certificateTypeId;
         config->endpointCertificateMappingSize++;
