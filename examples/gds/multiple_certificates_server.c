@@ -32,8 +32,8 @@ int main(int argc, char* argv[]) {
 
     UA_Server *server = UA_Server_new();
     UA_ServerConfig *config = UA_Server_getConfig(server);
-    UA_ServerConfig_setMinimal(config, 4842, &certificate1);
-    UA_ServerConfig_addEndpointCertificateMapping(config, &config->endpoints[0].serverCertificate, UA_NODEID_NUMERIC(2, 615), UA_NODEID_NUMERIC(2, 617));
+    UA_ServerConfig_setMinimal(config, 4842, &certificate2);
+    UA_ServerConfig_addEndpointCertificateMapping(config, &config->endpoints[0].serverCertificate, UA_NODEID_NUMERIC(1, 615), UA_NODEID_NUMERIC(1, 617));
 
     UA_ServerConfig_addSecurityPolicyBasic256(config, &certificate1, &privateKey1);
     UA_ByteString basic256Uri = UA_BYTESTRING("http://opcfoundation.org/UA/SecurityPolicy#Basic256");
@@ -50,6 +50,7 @@ int main(int argc, char* argv[]) {
     UA_ByteString_clear(&certificate2);
     UA_ByteString_clear(&privateKey2);
 
+
     if(!config) {
         UA_LOG_FATAL(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
                      "Could not create the server config");
@@ -58,5 +59,6 @@ int main(int argc, char* argv[]) {
 
     UA_Server_run(server, &running);
     UA_Server_delete(server);
+
     return 0;
 }

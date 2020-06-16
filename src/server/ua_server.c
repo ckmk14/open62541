@@ -29,7 +29,12 @@
 #endif
 
 #ifdef UA_ENABLE_GDS_CM
-#include "ua_certificate_manager.h"
+#include "mbedtls/asn1write.h"
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/entropy.h"
+#include "mbedtls/oid.h"
+#include "mbedtls/x509_csr.h"
+#include "mbedtls/platform.h"
 #endif
 
 #ifdef UA_ENABLE_VALGRIND_INTERACTIVE
@@ -246,134 +251,95 @@ void UA_Server_delete(UA_Server *server) {
 
 #ifdef UA_ENABLE_SERVER_PUSH
 
-
-UA_StatusCode copy_private_key_gnu_struc(gnutls_datum_t *data_privkey, UA_ByteString *privkey_copy) {
-    UA_StatusCode retval = UA_STATUSCODE_GOOD;
-    data_privkey->data = (unsigned char *)UA_malloc(privkey_copy->length + 1);
-    if (data_privkey->data == NULL)
-        return UA_STATUSCODE_BADOUTOFMEMORY;
-
-    data_privkey->size = (unsigned int)(privkey_copy->length + 1);
-
-    memcpy(data_privkey->data, privkey_copy->data, privkey_copy->length);
-    data_privkey->data[privkey_copy->length] = '\0';
-    data_privkey->size--;
-    return retval;
-}
-
-/* To Do: Need to move it to the plugin file*/
 /* Creation of Certificate Signing Request */
 UA_StatusCode create_csr(UA_Server *server, UA_String *subjectName,
                          UA_ByteString *certificateRequest) {
 
-    gnutls_x509_crq_t crq;
-    gnutls_x509_privkey_t private_key;
-    UA_String subjectName_nullTerminated;
-    unsigned char buffer[10 * 1024];
-    size_t buffer_size   = sizeof(buffer);
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    mbedtls_x509write_csr crq;
+    mbedtls_x509write_csr_init(&crq);
 
-    /* Initialize an empty certificate request */
-    int gnuErr = gnutls_x509_crq_init(&crq);
-    if (gnuErr < 0) {
-        gnutls_x509_crq_deinit(crq);
-        return UA_STATUSCODE_BADOUTOFMEMORY;
-    }
+    mbedtls_pk_context key;
+    mbedtls_pk_init(&key);
+    mbedtls_pk_setup( &key, mbedtls_pk_info_from_type( MBEDTLS_PK_RSA ));
 
-    /* Initialize an empty private key */
-    gnutls_x509_privkey_init(&private_key);
-    /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADOUTOFMEMORY); */
+    mbedtls_ctr_drbg_context ctr_drbg;
+    mbedtls_ctr_drbg_init(&ctr_drbg);
+    mbedtls_entropy_context entropy;
+    mbedtls_entropy_init(&entropy);
+    mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, NULL,0);
 
+    /* generate a new key if requested*/
     if ((server->config.regeneratePrivateKey) == 1) {
-        unsigned int security_bits;
 
-        /****** To-do: Nonce the additional entropy functionality ******/
+        mbedtls_rsa_gen_key( mbedtls_pk_rsa(key), mbedtls_ctr_drbg_random, &ctr_drbg, 4096, 65537);
 
-        /* Generate an RSA key of high security */
-        security_bits = gnutls_sec_param_to_pk_bits(GNUTLS_PK_RSA,
-                                                    GNUTLS_SEC_PARAM_HIGH);
-
-        /* Create a private key */
-        gnutls_x509_privkey_generate(private_key, GNUTLS_PK_RSA, security_bits, 0);
-        /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADINTERNALERROR); */
-
-        /******* To-do: Private key storage and upload while calling UpdateCertificate method ******/
     }
+    /* retreive the existing key*/
     else {
-        gnutls_datum_t data_privkey;
         UA_ByteString privkey_copy;
-
         UA_SecurityPolicy *securityPolicy = &server->config.securityPolicies[1];
         retval = private_key_abstraction(securityPolicy, &privkey_copy);
-        if(retval != UA_STATUSCODE_GOOD)
-            return retval;
-
-        retval = copy_private_key_gnu_struc(&data_privkey, &privkey_copy);
-
-        gnuErr = gnutls_x509_privkey_import2(private_key, &data_privkey,
-                                             GNUTLS_X509_FMT_DER, NULL, 0);
-        if (gnuErr < 0) {
-            return UA_STATUSCODE_BADINTERNALERROR;
-        }
+        mbedtls_pk_parse_key(&key, privkey_copy.data, privkey_copy.length, NULL, 0);
         UA_ByteString_clear(&privkey_copy);
-        gnutls_free(data_privkey.data);
+
+    }
+    /* set the subject name */
+    int mbedErr = mbedtls_x509write_csr_set_subject_name(&crq, (const char*)subjectName->data);
+    if (mbedErr != 0) {
+        return UA_STATUSCODE_BADTCPINTERNALERROR;
     }
 
-    //gnutls_x509_crt_set_dn requires null terminated string
-    subjectName_nullTerminated.length = subjectName->length + 1;
-    subjectName_nullTerminated.data = (UA_Byte *)
-            UA_calloc(subjectName_nullTerminated.length, sizeof(UA_Byte));
-    memcpy(subjectName_nullTerminated.data, subjectName->data, subjectName->length);
-    subjectName_nullTerminated.length--;
+    /* set the message digest algorithm */
+    mbedtls_x509write_csr_set_md_alg(&crq, MBEDTLS_MD_SHA1);
 
-    /* Add subject name to the distinguished name */
-    gnuErr = gnutls_x509_crq_set_dn(crq, (char *) subjectName_nullTerminated.data, NULL);
-    /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED); */
+    /* set the key for the CSR, that was either newly generated (regeneratePrivateKey == 1) or is the old key (regeneratePrivateKey == 0) */
+    mbedtls_x509write_csr_set_key(&crq, &key);
 
-    UA_String san_nullTerminated;
-    san_nullTerminated.length = server->config.applicationDescription.applicationUri.length + 1;
-    san_nullTerminated.data = (UA_Byte *)
-            UA_calloc(san_nullTerminated.length, sizeof(UA_Byte));
-    memcpy(san_nullTerminated.data, server->config.applicationDescription.applicationUri.data, server->config.applicationDescription.applicationUri.length);
-    san_nullTerminated.length--;
+    /* define the usage scope of the key in the csr*/
+    mbedtls_x509write_csr_set_key_usage(&crq, MBEDTLS_X509_KU_DIGITAL_SIGNATURE
+                                        |MBEDTLS_X509_KU_NON_REPUDIATION
+                                        |MBEDTLS_X509_KU_DATA_ENCIPHERMENT
+                                        |MBEDTLS_X509_KU_KEY_ENCIPHERMENT);
 
-    gnuErr= gnutls_x509_crq_set_subject_alt_name(crq, GNUTLS_SAN_URI,server->config.applicationDescription.applicationUri.data,
-                                                 (unsigned int) server->config.applicationDescription.applicationUri.length, GNUTLS_FSAN_SET);
-    /* Set the request version to 3 */
-    gnuErr = gnutls_x509_crq_set_version(crq, 3);
-    /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED); */
+    /* set the URI in the Subject Alternative Name Field. Other fields in the SAN can be set similarly with MBEDTLS_ASN1_CONTEXT_SPECIFIC and the corresponding number*/
+    unsigned int ret = 0;
+    unsigned char* buf;
+    size_t buflen = 65;
+    buf = (unsigned char*) mbedtls_calloc(1, buflen);
+    mbedtls_platform_zeroize(buf, buflen);
+    unsigned char* pc = buf + buflen;
+    size_t len = 0;
+    MBEDTLS_ASN1_CHK_ADD(len, (unsigned int)mbedtls_asn1_write_raw_buffer(&pc, buf, server->config.applicationDescription.applicationUri.data, server->config.applicationDescription.applicationUri.length));
+    MBEDTLS_ASN1_CHK_ADD(len, (unsigned int)mbedtls_asn1_write_len(&pc, buf, server->config.applicationDescription.applicationUri.length));
+    MBEDTLS_ASN1_CHK_ADD(len, (unsigned int)mbedtls_asn1_write_tag(&pc, buf, MBEDTLS_ASN1_CONTEXT_SPECIFIC | 6));
+    MBEDTLS_ASN1_CHK_ADD(len, (unsigned int)mbedtls_asn1_write_len(&pc, buf, len));
+    MBEDTLS_ASN1_CHK_ADD(len, (unsigned int)mbedtls_asn1_write_tag(&pc, buf, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE));
+    mbedtls_x509write_csr_set_extension(&crq, MBEDTLS_OID_SUBJECT_ALT_NAME, MBEDTLS_OID_SIZE(MBEDTLS_OID_SUBJECT_ALT_NAME), buf + buflen - len, len);
 
-    /* Associate the request with the private key */
-    gnuErr = gnutls_x509_crq_set_key(crq, private_key);
-    /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED); */
-
-    /* Self sign the certificate request */
-    gnuErr = gnutls_x509_crq_sign2(crq, private_key, GNUTLS_DIG_SHA1, 0);
-    /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED); */
-
-    /* Export the PEM encoded certificate request, and display it */
-    gnuErr = gnutls_x509_crq_export(crq, GNUTLS_X509_FMT_DER, buffer,
-                           &buffer_size);
-    /* UA_GNUTLS_ERRORHANDLING_RETURN(UA_STATUSCODE_BADSECURITYCHECKSFAILED); */
+    /* export the CSR in DER-Format, this will also sign the CSR*/
+    unsigned char buffer[10 * 1024];
+    size_t buffer_size   = sizeof(buffer);
+    int der_len = mbedtls_x509write_csr_der(&crq, buffer, buffer_size, mbedtls_ctr_drbg_random, &ctr_drbg);
+    unsigned char der[der_len];
+    size_t der_size = sizeof(der);
+    mbedtls_x509write_csr_der(&crq, der, der_size, mbedtls_ctr_drbg_random, &ctr_drbg);
 
     /* Allocate the output buffer */
-    retval = UA_ByteString_allocBuffer(certificateRequest, buffer_size);
+    retval = UA_ByteString_allocBuffer(certificateRequest, der_size);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
     /* Copy the output to the certificate */
-    certificateRequest->length = buffer_size;
+    certificateRequest->length = der_size;
     //UA_GDS_CM_CHECK_ALLOC(ret);
-    memcpy(certificateRequest->data, buffer, buffer_size);
 
-    if (!UA_String_equal(&subjectName_nullTerminated, &UA_STRING_NULL)) {
-        UA_String_deleteMembers(&subjectName_nullTerminated);
-    }
-    if (!UA_String_equal(&san_nullTerminated, &UA_STRING_NULL)) {
-        UA_String_deleteMembers(&san_nullTerminated);
-    }
-    gnutls_x509_privkey_deinit(private_key);
-    gnutls_x509_crq_deinit(crq);
+    memcpy(certificateRequest->data, der, der_size);
+    mbedtls_free(buf);
+    mbedtls_pk_free(&key);
+    mbedtls_x509write_csr_free(&crq);
+    mbedtls_entropy_free(&entropy);
+    mbedtls_ctr_drbg_free(&ctr_drbg);
 
     return retval;
 
@@ -393,10 +359,10 @@ UA_StatusCode server_update_certificate(UA_Server *server, const UA_NodeId *cert
                 && UA_NodeId_equal(&server->config.endpointCertificateMapping[i].certificateTypeId, certificateTypeId)) {
             if (!UA_ByteString_equal(&server->config.endpointCertificateMapping->serverCertificate, &UA_BYTESTRING_NULL)) {
                 /*Allocate the output buffer*/
-                retval = UA_ByteString_allocBuffer(&oldcertificate, server->config.endpointCertificateMapping->serverCertificate.length);
+                retval = UA_ByteString_allocBuffer(&oldcertificate, server->config.endpointCertificateMapping[i].serverCertificate.length);
                 if(retval != UA_STATUSCODE_GOOD)
                     return retval;
-                memcpy(oldcertificate.data, server->config.endpointCertificateMapping->serverCertificate.data, server->config.endpointCertificateMapping->serverCertificate.length);
+                memcpy(oldcertificate.data, server->config.endpointCertificateMapping[i].serverCertificate.data, server->config.endpointCertificateMapping[i].serverCertificate.length);
                 break;
             }
         }
