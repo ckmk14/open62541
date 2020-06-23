@@ -251,9 +251,14 @@ void UA_Server_delete(UA_Server *server) {
 
 #ifdef UA_ENABLE_SERVER_PUSH
 
+
 /* Creation of Certificate Signing Request */
+/* TODO: usage of given nonce */
 UA_StatusCode create_csr(UA_Server *server, UA_String *subjectName,
-                         UA_ByteString *certificateRequest) {
+                         UA_ByteString *certificateRequest,
+                         UA_NodeId *certificateGroupId,
+                         UA_NodeId *certificateTypeId,
+                         UA_ByteString *nonce) {
 
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     mbedtls_x509write_csr crq;
@@ -271,17 +276,31 @@ UA_StatusCode create_csr(UA_Server *server, UA_String *subjectName,
 
     /* generate a new key if requested*/
     if ((server->config.regeneratePrivateKey) == 1) {
-
         mbedtls_rsa_gen_key( mbedtls_pk_rsa(key), mbedtls_ctr_drbg_random, &ctr_drbg, 4096, 65537);
 
     }
     /* retreive the existing key*/
     else {
+        UA_ByteString oldCertificate;
+        for (int i = 0; i < (int) server->config.endpointCertificateMappingSize; i++) {
+            if (UA_NodeId_equal(certificateGroupId, &server->config.endpointCertificateMapping[i].certificateGroupId)
+                    && UA_NodeId_equal(certificateTypeId, &server->config.endpointCertificateMapping[i].certificateTypeId)) {
+                retval = UA_ByteString_allocBuffer(&oldCertificate, server->config.endpointCertificateMapping[i].serverCertificate.length);
+                memcpy(oldCertificate.data, server->config.endpointCertificateMapping[i].serverCertificate.data, server->config.endpointCertificateMapping[i].serverCertificate.length);
+            }
+        }
+
         UA_ByteString privkey_copy;
-        UA_SecurityPolicy *securityPolicy = &server->config.securityPolicies[1];
+        UA_SecurityPolicy *securityPolicy;
+        for (int j = 0; j < (int) server->config.securityPoliciesSize; j++) {
+            if (UA_ByteString_equal(&server->config.securityPolicies[j].localCertificate, &oldCertificate)) {
+                securityPolicy = &server->config.securityPolicies[j];
+            }
+        }
         retval = private_key_abstraction(securityPolicy, &privkey_copy);
         mbedtls_pk_parse_key(&key, privkey_copy.data, privkey_copy.length, NULL, 0);
         UA_ByteString_clear(&privkey_copy);
+        UA_ByteString_clear(&oldCertificate);
 
     }
     /* set the subject name */
@@ -315,8 +334,10 @@ UA_StatusCode create_csr(UA_Server *server, UA_String *subjectName,
     MBEDTLS_ASN1_CHK_ADD(len, (unsigned int)mbedtls_asn1_write_tag(&pc, buf, MBEDTLS_ASN1_CONTEXT_SPECIFIC | 6));
     MBEDTLS_ASN1_CHK_ADD(len, (unsigned int)mbedtls_asn1_write_len(&pc, buf, len));
     MBEDTLS_ASN1_CHK_ADD(len, (unsigned int)mbedtls_asn1_write_tag(&pc, buf, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE));
-    mbedtls_x509write_csr_set_extension(&crq, MBEDTLS_OID_SUBJECT_ALT_NAME, MBEDTLS_OID_SIZE(MBEDTLS_OID_SUBJECT_ALT_NAME), buf + buflen - len, len);
-
+    mbedErr = mbedtls_x509write_csr_set_extension(&crq, MBEDTLS_OID_SUBJECT_ALT_NAME, MBEDTLS_OID_SIZE(MBEDTLS_OID_SUBJECT_ALT_NAME), buf + buflen - len, len);
+    if (mbedErr != 0) {
+        return UA_STATUSCODE_BADTCPINTERNALERROR;
+    }
     /* export the CSR in DER-Format, this will also sign the CSR*/
     unsigned char buffer[10 * 1024];
     size_t buffer_size   = sizeof(buffer);
@@ -348,6 +369,7 @@ UA_StatusCode create_csr(UA_Server *server, UA_String *subjectName,
 UA_StatusCode server_update_certificate(UA_Server *server, const UA_NodeId *certificateGroupId,
                                         const UA_NodeId *certificateTypeId,
                                         UA_ByteString *newcertificate,
+                                        UA_ByteString *newprivatekey,
                                         UA_Boolean *applyChangesRequired) {
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
@@ -369,12 +391,12 @@ UA_StatusCode server_update_certificate(UA_Server *server, const UA_NodeId *cert
         i++;
 
     }
-    /* To do: Private key pass while regen priv key is 1 */
-    retval = UA_Server_updateCertificate(server, certificateGroupId, certificateTypeId, &oldcertificate, newcertificate, &UA_BYTESTRING_NULL, 0, 0);
+    retval = UA_Server_updateCertificate(server, certificateGroupId, certificateTypeId, &oldcertificate, newcertificate, newprivatekey, 0, 0);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
     (server->config.regeneratePrivateKey) = 0;
+
     /* To do: The check has to be fixed */
     size_t j = 0;
     *applyChangesRequired = 0;
@@ -405,17 +427,11 @@ UA_GDS_CreateSigningRequest(UA_Server *server,
     if (subjectName == NULL) {
         return UA_STATUSCODE_BADINTERNALERROR;
     }
-    if ((server->config.regeneratePrivateKey) == false) {
-        server->config.regeneratePrivateKey = *regeneratePrivateKey;
-    }
-    else {
-        UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER,
-                    "Not implemented.\n");
-        return UA_STATUSCODE_BADTIMEOUT;
-    }
+
+    server->config.regeneratePrivateKey = *regeneratePrivateKey;
 
     /* Create csr for requesting the certificate */
-    retval = create_csr(server, subjectName, &output);
+    retval = create_csr(server, subjectName, &output, certificateGroupId, certificateTypeId, nonce);
 
     /* Allocate the output buffer */
     retval = UA_ByteString_allocBuffer(certificateRequest, output.length);
@@ -441,7 +457,6 @@ UA_GDS_UpdateCertificate(UA_Server *server,
                          UA_Boolean *applyChangesRequired) {
 
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
-
     /* To do: Integrity check of the received certificate */
     retval = VerifyUpdatedCertificate(certificate, issuerCertificates);
     if(retval) {
@@ -475,7 +490,7 @@ UA_GDS_UpdateCertificate(UA_Server *server,
     }
 
     /* Update the certificate after verifying that the certificate is not updated */
-    retval = server_update_certificate(server, certificateGroupId, certificateTypeId, certificate, applyChangesRequired);
+    retval = server_update_certificate(server, certificateGroupId, certificateTypeId, certificate, privateKey, applyChangesRequired);
     return retval;
 }
 
